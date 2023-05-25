@@ -22,9 +22,6 @@ type Rcvr_Base struct {
 	ctx    context.Context
 	host   component.Host
 	cancel context.CancelFunc
-
-	// Did we see at least one Trace2 event from the client?
-	sawData bool
 }
 
 // `Start()` handles base-class portions of receiver initialization.
@@ -97,7 +94,7 @@ func (rcvr_base *Rcvr_Base) processRawLine(rawLine []byte, tr2 *trace2Dataset) e
 	}
 
 	if evt != nil {
-		rcvr_base.sawData = true
+		tr2.sawData = true
 
 		err = evt_apply(tr2, evt)
 		if err != nil {
@@ -109,7 +106,7 @@ func (rcvr_base *Rcvr_Base) processRawLine(rawLine []byte, tr2 *trace2Dataset) e
 }
 
 func (rcvr_base *Rcvr_Base) exportTraces(tr2 *trace2Dataset) error {
-	if !rcvr_base.sawData {
+	if !tr2.sawData {
 		return nil
 	}
 

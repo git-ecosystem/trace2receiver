@@ -30,6 +30,9 @@ type trace2Dataset struct {
 	// back to the worker thread).
 	datasetId uint64
 
+	// Did we see at least one Trace2 event from the client?
+	sawData bool
+
 	randSource *rand.Rand
 
 	otelTraceID [16]byte
