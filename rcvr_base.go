@@ -104,15 +104,3 @@ func (rcvr_base *Rcvr_Base) processRawLine(rawLine []byte, tr2 *trace2Dataset) e
 
 	return nil
 }
-
-func (rcvr_base *Rcvr_Base) exportTraces(tr2 *trace2Dataset) error {
-	if !tr2.sawData {
-		return nil
-	}
-
-	if !tr2.prepareDataset() {
-		return nil
-	}
-
-	return rcvr_base.TracesConsumer.ConsumeTraces(rcvr_base.ctx, tr2.ToTraces())
-}

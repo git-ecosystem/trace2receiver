@@ -210,10 +210,7 @@ func (rcvr *Rcvr_NamedPipe) worker(conn net.Conn, worker_id uint64) {
 	conn.Close()
 
 	if !haveError {
-		err := rcvr.Base.exportTraces(tr2)
-		if err != nil {
-			rcvr.Base.Logger.Error(err.Error())
-		}
+		tr2.exportTraces(rcvr.Base)
 	}
 
 	// Wait for our subordinate thread to exit

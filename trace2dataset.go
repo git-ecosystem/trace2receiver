@@ -472,3 +472,20 @@ func (tr2 *trace2Dataset) setQualifiedExeVerbModeName() {
 
 	tr2.process.qualifiedExeVerbModeName += "#" + tr2.process.cmdMode
 }
+
+func (tr2 *trace2Dataset) exportTraces(rcvr_base *Rcvr_Base) {
+	if !tr2.sawData {
+		return
+	}
+
+	if !tr2.prepareDataset() {
+		return
+	}
+
+	err := rcvr_base.TracesConsumer.ConsumeTraces(rcvr_base.ctx, tr2.ToTraces())
+	if err == nil {
+		return
+	}
+
+	rcvr_base.Logger.Error(err.Error())
+}
