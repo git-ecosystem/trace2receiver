@@ -105,4 +105,7 @@ const (
 
 	Trace2ThreadTimers   = attribute.Key("trace2.thread.timers")
 	Trace2ThreadCounters = attribute.Key("trace2.thread.counters")
+
+	Trace2GoArch = attribute.Key("trace2.machine.arch")
+	Trace2GoOS   = attribute.Key("trace2.machine.os")
 )
