@@ -223,9 +223,7 @@ func (rcvr *Rcvr_UnixSocket) worker(conn *net.UnixConn, worker_id uint64) {
 			break
 		}
 
-		err = rcvr.Base.processRawLine(rawLine, tr2)
-		if err != nil {
-			rcvr.Base.Logger.Error(err.Error())
+		if processRawLine(rawLine, tr2, rcvr.Base.Logger, rcvr.Base.AllowCommandControlVerbs) != nil {
 			haveError = true
 			break
 		}

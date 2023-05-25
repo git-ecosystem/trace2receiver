@@ -193,9 +193,7 @@ func (rcvr *Rcvr_NamedPipe) worker(conn net.Conn, worker_id uint64) {
 
 		nrBytesRead += len(rawLine)
 
-		err = rcvr.Base.processRawLine(rawLine, tr2)
-		if err != nil {
-			rcvr.Base.Logger.Error(err.Error())
+		if processRawLine(rawLine, tr2, rcvr.Base.Logger, rcvr.Base.AllowCommandControlVerbs) != nil {
 			haveError = true
 			break
 		}
