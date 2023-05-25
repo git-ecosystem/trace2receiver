@@ -60,6 +60,13 @@ type trace2Dataset struct {
 
 	// The set of completed regions (across any thread).
 	completedRegions []*TrRegion
+
+	// Dictionary of optional PII data that we want to include in
+	// the process data.  This is only used when bits are enabled
+	// in the `receivers.trace2receiver.pii.*` are set in config.yml.
+	// These fields maybe GDPR-restricted, so use this at your own risk.
+	// Map from the SemConv keys to the data value.
+	pii map[string]string
 }
 
 // Data associated with the entire process.
@@ -242,6 +249,8 @@ func NewTrace2Dataset() *trace2Dataset {
 	tr2.process.repoSet = make(map[int64]string)
 	tr2.process.paramSetValues = make(map[string]string)
 	tr2.process.paramSetPriorities = make(map[string]int)
+
+	tr2.pii = make(map[string]string)
 
 	return tr2
 }

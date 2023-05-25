@@ -200,6 +200,10 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
 	sm.PutStr(string(Trace2GoArch), runtime.GOARCH)
 	sm.PutStr(string(Trace2GoOS), runtime.GOOS)
 
+	for k, v := range tr2.pii {
+		sm.PutStr(k, v)
+	}
+
 	sm.PutStr(string(Trace2CmdName), tr2.process.qualifiedExeBaseName)
 	sm.PutStr(string(Trace2CmdNameVerb), tr2.process.qualifiedExeVerbName)
 	sm.PutStr(string(Trace2CmdNameVerbMode), tr2.process.qualifiedExeVerbModeName)

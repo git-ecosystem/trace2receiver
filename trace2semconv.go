@@ -108,4 +108,7 @@ const (
 
 	Trace2GoArch = attribute.Key("trace2.machine.arch")
 	Trace2GoOS   = attribute.Key("trace2.machine.os")
+
+	Trace2PiiHostname = attribute.Key("trace2.pii.hostname")
+	Trace2PiiUsername = attribute.Key("trace2.pii.username")
 )

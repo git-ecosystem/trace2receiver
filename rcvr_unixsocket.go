@@ -208,6 +208,8 @@ func (rcvr *Rcvr_UnixSocket) worker(conn *net.UnixConn, worker_id uint64) {
 	// Dataset mapping.
 	tr2 := NewTrace2Dataset()
 
+	tr2.pii_gather(rcvr.Base.RcvrConfig, conn)
+
 	r := bufio.NewReader(conn)
 	for {
 		rawLine, err := r.ReadBytes('\n')
@@ -223,7 +225,8 @@ func (rcvr *Rcvr_UnixSocket) worker(conn *net.UnixConn, worker_id uint64) {
 			break
 		}
 
-		if processRawLine(rawLine, tr2, rcvr.Base.Logger, rcvr.Base.AllowCommandControlVerbs) != nil {
+		if processRawLine(rawLine, tr2, rcvr.Base.Logger,
+			rcvr.Base.RcvrConfig.AllowCommandControlVerbs) != nil {
 			haveError = true
 			break
 		}

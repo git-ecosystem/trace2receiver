@@ -171,6 +171,8 @@ func (rcvr *Rcvr_NamedPipe) worker(conn net.Conn, worker_id uint64) {
 	// Dataset mapping.
 	tr2 := NewTrace2Dataset()
 
+	tr2.pii_gather(rcvr.Base.RcvrConfig)
+
 	var nrBytesRead int = 0
 
 	r := bufio.NewReader(conn)
@@ -193,7 +195,8 @@ func (rcvr *Rcvr_NamedPipe) worker(conn net.Conn, worker_id uint64) {
 
 		nrBytesRead += len(rawLine)
 
-		if processRawLine(rawLine, tr2, rcvr.Base.Logger, rcvr.Base.AllowCommandControlVerbs) != nil {
+		if processRawLine(rawLine, tr2, rcvr.Base.Logger,
+			rcvr.Base.RcvrConfig.AllowCommandControlVerbs) != nil {
 			haveError = true
 			break
 		}

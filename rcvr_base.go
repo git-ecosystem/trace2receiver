@@ -9,12 +9,13 @@ import (
 )
 
 type Rcvr_Base struct {
-	// These fields should be set in ctor() in factory.go:createTraces()
-	Logger                   *zap.Logger
-	TracesConsumer           consumer.Traces
-	MetricsConsumer          consumer.Metrics
-	LogsConsumer             consumer.Logs
-	AllowCommandControlVerbs bool
+	// These fields should be set in ctor() in platform_*.go:createTraces()
+	// when it is called from factory.go:NewFactory().
+	Logger          *zap.Logger
+	TracesConsumer  consumer.Traces
+	MetricsConsumer consumer.Metrics
+	LogsConsumer    consumer.Logs
+	RcvrConfig      *Config
 
 	// Component properties set in Start()
 	ctx    context.Context
@@ -28,9 +29,17 @@ func (rcvr_base *Rcvr_Base) Start(unused_ctx context.Context, host component.Hos
 	rcvr_base.ctx = context.Background()
 	rcvr_base.ctx, rcvr_base.cancel = context.WithCancel(rcvr_base.ctx)
 
-	if rcvr_base.AllowCommandControlVerbs {
+	if rcvr_base.RcvrConfig.AllowCommandControlVerbs {
 		rcvr_base.Logger.Info("Command verbs are enabled")
 	}
 
+	if rcvr_base.RcvrConfig.PiiSettings != nil {
+		if rcvr_base.RcvrConfig.PiiSettings.IncludeHostname {
+			rcvr_base.Logger.Info("PII: Hostname logging is enabled")
+		}
+		if rcvr_base.RcvrConfig.PiiSettings.IncludeUsername {
+			rcvr_base.Logger.Info("PII: Username logging is enabled")
+		}
+	}
 	return nil
 }

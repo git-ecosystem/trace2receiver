@@ -2,9 +2,12 @@ package trace2receiver
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 // `Config` represents the complete configuration settings for
@@ -44,6 +47,10 @@ type Config struct {
 	// Allow command and control verbs to be embedded in the Trace2
 	// data stream.
 	AllowCommandControlVerbs bool `mapstructure:"enable_commands"`
+
+	// Pathname to YML file containing PII settings.
+	PiiSettingsPath string `mapstructure:"pii_settings"`
+	PiiSettings     *PiiSettings
 }
 
 // `Validate()` checks if the receiver configuration is valid.
@@ -87,6 +94,20 @@ func (cfg *Config) Validate() error {
 				err.Error())
 		}
 		cfg.UnixSocketPath = path
+	}
+
+	if len(cfg.PiiSettingsPath) > 0 {
+		data, err := os.ReadFile(cfg.PiiSettingsPath)
+		if err != nil {
+			return fmt.Errorf("receivers.pii_settings could not read '%s': '%s'",
+				cfg.PiiSettingsPath, err.Error())
+		}
+		cfg.PiiSettings = new(PiiSettings)
+		err = yaml.Unmarshal(data, cfg.PiiSettings)
+		if err != nil {
+			return fmt.Errorf("receivers.pii_settings could not parse '%s': '%s'",
+				cfg.PiiSettingsPath, err.Error())
+		}
 	}
 
 	return nil
