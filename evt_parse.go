@@ -1,9 +1,12 @@
 package trace2receiver
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 type TrEvent struct {
@@ -78,6 +81,76 @@ var ekm *ExtractKeysMap = &ExtractKeysMap{
 	"counter":        extract_keys__counter,
 	"th_counter":     extract_keys__counter,
 	"too_many_files": nil, // we don't care about this
+}
+
+var CommandControlVerbPrefix []byte = []byte("cc: ")
+
+// Parse the raw line of text from the client and parse it.
+//
+// If is JSON, parse and validate it as a Trace2 event message.
+// If it is a command/control from the helper tool, process it.
+// If it is blank/empty or a "#-style" comment line, ignore it.
+//
+// Returns (nil, err) if we had an error.
+// Returns (nil, nil) if we had command/control data.
+// Returns (evt, nil) if we had event data.
+func evt_parse(rawLine []byte, logger *zap.Logger, allowCommands bool) (*TrEvent, error) {
+	trimmed := bytes.TrimSpace(rawLine)
+
+	if len(trimmed) == 0 || trimmed[0] == '#' {
+		return nil, nil
+	}
+
+	if trimmed[0] == '{' {
+		return parse_json(trimmed)
+	}
+
+	if bytes.HasPrefix(trimmed, CommandControlVerbPrefix) {
+		if allowCommands {
+			return nil, do_command_verb(trimmed[len(CommandControlVerbPrefix):], logger)
+		} else {
+			logger.Debug(fmt.Sprintf("command verbs are disabled: '%s'", trimmed))
+			return nil, nil
+		}
+	}
+
+	logger.Debug(fmt.Sprintf("unrecognized data stream verb: '%s'", trimmed))
+	return nil, nil
+}
+
+func do_command_verb(cmd []byte, logger *zap.Logger) error {
+	logger.Debug(fmt.Sprintf("Command verb: '%s'", cmd))
+
+	// TODO do something with the rest of the line and return.
+
+	logger.Debug(fmt.Sprintf("invalid command verb: '%s'", cmd))
+	return nil
+}
+
+// Process a raw line of text from the client.  This should contain a single
+// line of Trace2 data in JSON format.  But we do allow command and control
+// verbs (primarily for test and debug).
+func processRawLine(rawLine []byte, tr2 *trace2Dataset, logger *zap.Logger, allowCommands bool) error {
+
+	logger.Debug(fmt.Sprintf("[dsid %06d] saw: %s", tr2.datasetId, rawLine))
+
+	evt, err := evt_parse(rawLine, logger, allowCommands)
+	if err != nil {
+		logger.Error(err.Error())
+		return err
+	}
+
+	if evt != nil {
+		tr2.sawData = true
+
+		err = evt_apply(tr2, evt)
+		if err != nil {
+			logger.Error(err.Error())
+			return err
+		}
+	}
+
+	return nil
 }
 
 func parse_json(line []byte) (*TrEvent, error) {

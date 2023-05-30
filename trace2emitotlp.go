@@ -3,6 +3,7 @@ package trace2receiver
 import (
 	"encoding/json"
 	"fmt"
+	"runtime"
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/ptrace"
@@ -195,6 +196,13 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
 
 	sm := span.Attributes()
 	sm.PutStr(string(Trace2SpanType), "process")
+
+	sm.PutStr(string(Trace2GoArch), runtime.GOARCH)
+	sm.PutStr(string(Trace2GoOS), runtime.GOOS)
+
+	for k, v := range tr2.pii {
+		sm.PutStr(k, v)
+	}
 
 	sm.PutStr(string(Trace2CmdName), tr2.process.qualifiedExeBaseName)
 	sm.PutStr(string(Trace2CmdNameVerb), tr2.process.qualifiedExeVerbName)

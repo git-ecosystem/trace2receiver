@@ -208,6 +208,8 @@ func (rcvr *Rcvr_UnixSocket) worker(conn *net.UnixConn, worker_id uint64) {
 	// Dataset mapping.
 	tr2 := NewTrace2Dataset()
 
+	tr2.pii_gather(rcvr.Base.RcvrConfig, conn)
+
 	r := bufio.NewReader(conn)
 	for {
 		rawLine, err := r.ReadBytes('\n')
@@ -223,9 +225,8 @@ func (rcvr *Rcvr_UnixSocket) worker(conn *net.UnixConn, worker_id uint64) {
 			break
 		}
 
-		err = rcvr.Base.processRawLine(rawLine, tr2)
-		if err != nil {
-			rcvr.Base.Logger.Error(err.Error())
+		if processRawLine(rawLine, tr2, rcvr.Base.Logger,
+			rcvr.Base.RcvrConfig.AllowCommandControlVerbs) != nil {
 			haveError = true
 			break
 		}
@@ -240,10 +241,7 @@ func (rcvr *Rcvr_UnixSocket) worker(conn *net.UnixConn, worker_id uint64) {
 	conn.Close()
 
 	if !haveError {
-		err := rcvr.Base.exportTraces(tr2)
-		if err != nil {
-			rcvr.Base.Logger.Error(err.Error())
-		}
+		tr2.exportTraces(rcvr.Base)
 	}
 
 	// Wait for our subordinate thread to exit

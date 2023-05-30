@@ -15,6 +15,8 @@ func createDefaultConfig() component.Config {
 		NamedPipePath:            "",
 		UnixSocketPath:           "",
 		AllowCommandControlVerbs: false,
+		PiiSettingsPath:          "",
+		PiiSettings:              nil,
 	}
 }
 

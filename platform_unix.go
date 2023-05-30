@@ -5,6 +5,8 @@ package trace2receiver
 
 import (
 	"context"
+	"net"
+	"os"
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
@@ -25,11 +27,28 @@ func createTraces(_ context.Context,
 
 	rcvr := &Rcvr_UnixSocket{
 		Base: &Rcvr_Base{
-			Logger:                   logger,
-			TracesConsumer:           consumer,
-			AllowCommandControlVerbs: trace2Cfg.AllowCommandControlVerbs,
+			Logger:         logger,
+			TracesConsumer: consumer,
+			RcvrConfig:     trace2Cfg,
 		},
 		SocketPath: trace2Cfg.UnixSocketPath,
 	}
 	return rcvr, nil
+}
+
+// Gather up any requested PII from the machine or
+// possibly the connection from the client process.
+// Add any requested PII data to `tr2.pii[]`.
+func (tr2 *trace2Dataset) pii_gather(cfg *Config, conn *net.UnixConn) {
+	if cfg.PiiSettings != nil && cfg.PiiSettings.IncludeHostname {
+		if h, err := os.Hostname(); err == nil {
+			tr2.pii[string(Trace2PiiHostname)] = h
+		}
+	}
+
+	if cfg.PiiSettings != nil && cfg.PiiSettings.IncludeUsername {
+		if u, err := getPeerUsername(conn); err == nil {
+			tr2.pii[string(Trace2PiiUsername)] = u
+		}
+	}
 }
