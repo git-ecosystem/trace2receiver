@@ -573,6 +573,10 @@ func apply__def_param(tr2 *trace2Dataset, evt *TrEvent) (err error) {
 	tr2.process.paramSetValues[key] = valNew
 	tr2.process.paramSetPriorities[key] = priNew
 
+	// We DO NOT try to lookup the filtering keys at this point
+	// because we don't know if this is final (highest priority)
+	// param, so we cannot try to short circut for "dl:drop" yet.
+
 	return nil
 }
 

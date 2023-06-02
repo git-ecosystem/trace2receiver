@@ -903,7 +903,7 @@ func Test_Dataset_RunDashed_Invalid(t *testing.T) {
 // Given an array of raw Trace2 messages, parse and appy them
 // to a newly created dataset.
 func load_test_dataset(t *testing.T, events []string) (tr2 *trace2Dataset, sufficient bool) {
-	tr2 = NewTrace2Dataset()
+	tr2 = NewTrace2Dataset(nil)
 
 	for _, s := range events {
 		// Use `parse_json()` rather than `evt_parse()` to avoid

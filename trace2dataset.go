@@ -25,6 +25,8 @@ import (
 // from the client process, so we wait for it to tell us that the
 // process is really finished.
 type trace2Dataset struct {
+	rcvr_base *Rcvr_Base
+
 	// Unique dataset id for this dataset.  We'll use this in our
 	// debug logging to disambiguate messages (and associate them
 	// back to the worker thread).
@@ -67,6 +69,13 @@ type trace2Dataset struct {
 	// These fields maybe GDPR-restricted, so use this at your own risk.
 	// Map from the SemConv keys to the data value.
 	pii map[string]string
+
+	// The filter ruleset or detail level computed for data from this
+	// Git command.
+	dl FSDetailLevel
+
+	// Remember the debug diags for how we computed the detail level.
+	dl_debug string
 }
 
 // Data associated with the entire process.
@@ -234,9 +243,10 @@ func makeDatasetId() uint64 {
 	return dsid
 }
 
-func NewTrace2Dataset() *trace2Dataset {
+func NewTrace2Dataset(rcvr_base *Rcvr_Base) *trace2Dataset {
 	var tr2 *trace2Dataset = new(trace2Dataset)
 
+	tr2.rcvr_base = rcvr_base
 	tr2.datasetId = makeDatasetId()
 
 	var rngSeed int64
@@ -251,6 +261,7 @@ func NewTrace2Dataset() *trace2Dataset {
 	tr2.process.paramSetPriorities = make(map[string]int)
 
 	tr2.pii = make(map[string]string)
+	tr2.dl = FSDetailLevelUnset
 
 	return tr2
 }
@@ -482,7 +493,7 @@ func (tr2 *trace2Dataset) setQualifiedExeVerbModeName() {
 	tr2.process.qualifiedExeVerbModeName += "#" + tr2.process.cmdMode
 }
 
-func (tr2 *trace2Dataset) exportTraces(rcvr_base *Rcvr_Base) {
+func (tr2 *trace2Dataset) exportTraces() {
 	if !tr2.sawData {
 		return
 	}
@@ -491,10 +502,17 @@ func (tr2 *trace2Dataset) exportTraces(rcvr_base *Rcvr_Base) {
 		return
 	}
 
-	err := rcvr_base.TracesConsumer.ConsumeTraces(rcvr_base.ctx, tr2.ToTraces())
+	tr2.dl, tr2.dl_debug = tr2.computeDetailLevel()
+	tr2.rcvr_base.Logger.Debug(tr2.dl_debug)
+
+	if tr2.dl == FSDetailLevelDrop {
+		return
+	}
+
+	err := tr2.rcvr_base.TracesConsumer.ConsumeTraces(tr2.rcvr_base.ctx, tr2.ToTraces())
 	if err == nil {
 		return
 	}
 
-	rcvr_base.Logger.Error(err.Error())
+	tr2.rcvr_base.Logger.Error(err.Error())
 }

@@ -110,27 +110,31 @@ func (tr2 *trace2Dataset) ToTraces() ptrace.Traces {
 	exeSpan := scopes.Spans().AppendEmpty()
 	emitProcessSpan(&exeSpan, tr2)
 
-	// Create an OTEL span for the lifetime of each non-main thread.
-	for _, th := range tr2.threads {
-		thSpan := scopes.Spans().AppendEmpty()
-		emitNonMainThreadSpan(&thSpan, th, tr2)
+	if tr2.dl == FSDetailLevelVerbose {
+		// Create an OTEL span for the lifetime of each non-main thread.
+		for _, th := range tr2.threads {
+			thSpan := scopes.Spans().AppendEmpty()
+			emitNonMainThreadSpan(&thSpan, th, tr2)
+		}
+
+		// Create OTEL spans for all completed regions (from all threads).
+		for _, r := range tr2.completedRegions {
+			rSpan := scopes.Spans().AppendEmpty()
+			emitRegionSpan(&rSpan, r, tr2)
+		}
 	}
 
-	// Create OTEL spans for all completed regions (from all threads).
-	for _, r := range tr2.completedRegions {
-		rSpan := scopes.Spans().AppendEmpty()
-		emitRegionSpan(&rSpan, r, tr2)
-	}
+	if tr2.dl == FSDetailLevelProcess || tr2.dl == FSDetailLevelVerbose {
+		// Create an OTEL span for each child process that this process created.
+		for _, child := range tr2.children {
+			childSpan := scopes.Spans().AppendEmpty()
+			emitChildSpan(&childSpan, child, tr2)
+		}
 
-	// Create an OTEL span for each child process that this process created.
-	for _, child := range tr2.children {
-		childSpan := scopes.Spans().AppendEmpty()
-		emitChildSpan(&childSpan, child, tr2)
-	}
-
-	for _, exec := range tr2.exec {
-		execSpan := scopes.Spans().AppendEmpty()
-		emitExecSpan(&execSpan, exec, tr2)
+		for _, exec := range tr2.exec {
+			execSpan := scopes.Spans().AppendEmpty()
+			emitExecSpan(&execSpan, exec, tr2)
+		}
 	}
 
 	return pt
@@ -215,17 +219,19 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
 		sm.PutStr(string(Trace2CmdArgv), string(jargs))
 	}
 
-	if len(tr2.process.cmdAncestry) > 0 {
-		jargs, _ := json.Marshal(tr2.process.cmdAncestry)
-		sm.PutStr(string(Trace2CmdAncestry), string(jargs))
-	}
+	if tr2.dl == FSDetailLevelProcess || tr2.dl == FSDetailLevelVerbose {
+		if len(tr2.process.cmdAncestry) > 0 {
+			jargs, _ := json.Marshal(tr2.process.cmdAncestry)
+			sm.PutStr(string(Trace2CmdAncestry), string(jargs))
+		}
 
-	if len(tr2.process.cmdAliasKey) > 0 {
-		sm.PutStr(string(Trace2CmdAliasKey), tr2.process.cmdAliasKey)
+		if len(tr2.process.cmdAliasKey) > 0 {
+			sm.PutStr(string(Trace2CmdAliasKey), tr2.process.cmdAliasKey)
 
-		if len(tr2.process.cmdAliasValue) > 0 {
-			jargs, _ := json.Marshal(tr2.process.cmdAliasValue)
-			sm.PutStr(string(Trace2CmdAliasValue), string(jargs))
+			if len(tr2.process.cmdAliasValue) > 0 {
+				jargs, _ := json.Marshal(tr2.process.cmdAliasValue)
+				sm.PutStr(string(Trace2CmdAliasValue), string(jargs))
+			}
 		}
 	}
 
@@ -246,29 +252,35 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
 		sm.PutStr(string(Trace2ParamSet), string(jargs))
 	}
 
-	if tr2.process.dataValues != nil && len(tr2.process.dataValues) > 0 {
-		jargs, _ := json.Marshal(tr2.process.dataValues)
-		sm.PutStr(string(Trace2ProcessData), string(jargs))
+	if tr2.dl == FSDetailLevelProcess || tr2.dl == FSDetailLevelVerbose {
+		if tr2.process.dataValues != nil && len(tr2.process.dataValues) > 0 {
+			jargs, _ := json.Marshal(tr2.process.dataValues)
+			sm.PutStr(string(Trace2ProcessData), string(jargs))
+		}
 	}
 
-	// Emit per-thread counters and timers for the main thread because
-	// it is not handled by `emitNonMainThreadSpan()`.
-	if tr2.process.mainThread.timers != nil {
-		jargs, _ := json.Marshal(tr2.process.mainThread.timers)
-		sm.PutStr(string(Trace2ThreadTimers), string(jargs))
-	}
-	if tr2.process.mainThread.counters != nil {
-		jargs, _ := json.Marshal(tr2.process.mainThread.counters)
-		sm.PutStr(string(Trace2ThreadCounters), string(jargs))
+	if tr2.dl == FSDetailLevelVerbose {
+		// Emit per-thread counters and timers for the main thread because
+		// it is not handled by `emitNonMainThreadSpan()`.
+		if tr2.process.mainThread.timers != nil {
+			jargs, _ := json.Marshal(tr2.process.mainThread.timers)
+			sm.PutStr(string(Trace2ThreadTimers), string(jargs))
+		}
+		if tr2.process.mainThread.counters != nil {
+			jargs, _ := json.Marshal(tr2.process.mainThread.counters)
+			sm.PutStr(string(Trace2ThreadCounters), string(jargs))
+		}
 	}
 
-	if tr2.process.timers != nil {
-		jargs, _ := json.Marshal(tr2.process.timers)
-		sm.PutStr(string(Trace2ProcessTimers), string(jargs))
-	}
-	if tr2.process.counters != nil {
-		jargs, _ := json.Marshal(tr2.process.counters)
-		sm.PutStr(string(Trace2ProcessCounters), string(jargs))
+	if tr2.dl == FSDetailLevelProcess || tr2.dl == FSDetailLevelVerbose {
+		if tr2.process.timers != nil {
+			jargs, _ := json.Marshal(tr2.process.timers)
+			sm.PutStr(string(Trace2ProcessTimers), string(jargs))
+		}
+		if tr2.process.counters != nil {
+			jargs, _ := json.Marshal(tr2.process.counters)
+			sm.PutStr(string(Trace2ProcessCounters), string(jargs))
+		}
 	}
 }
 

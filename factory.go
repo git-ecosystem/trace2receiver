@@ -17,6 +17,8 @@ func createDefaultConfig() component.Config {
 		AllowCommandControlVerbs: false,
 		PiiSettingsPath:          "",
 		PiiSettings:              nil,
+		FilterSettingsPath:       "",
+		FilterSettings:           nil,
 	}
 }
 

@@ -169,7 +169,7 @@ func (rcvr *Rcvr_NamedPipe) worker(conn net.Conn, worker_id uint64) {
 	// this connection are from the same process (and will therefore have
 	// the same Trace2 SID).  That is, we don't have to maintain a SID to
 	// Dataset mapping.
-	tr2 := NewTrace2Dataset()
+	tr2 := NewTrace2Dataset(rcvr.Base)
 
 	tr2.pii_gather(rcvr.Base.RcvrConfig)
 
@@ -211,7 +211,7 @@ func (rcvr *Rcvr_NamedPipe) worker(conn net.Conn, worker_id uint64) {
 	conn.Close()
 
 	if !haveError {
-		tr2.exportTraces(rcvr.Base)
+		tr2.exportTraces()
 	}
 
 	// Wait for our subordinate thread to exit
