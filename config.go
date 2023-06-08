@@ -2,13 +2,9 @@ package trace2receiver
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
-
-	"github.com/mitchellh/mapstructure"
-	"gopkg.in/yaml.v2"
 )
 
 // `Config` represents the complete configuration settings for
@@ -109,77 +105,9 @@ func (cfg *Config) Validate() error {
 	}
 
 	if len(cfg.FilterSettingsPath) > 0 {
-		data, err := os.ReadFile(cfg.FilterSettingsPath)
+		cfg.FilterSettings, err = parseFilterSettings(cfg.FilterSettingsPath)
 		if err != nil {
-			return fmt.Errorf("filter_settings could not read '%s': '%s'",
-				cfg.FilterSettingsPath, err.Error())
-		}
-
-		m := make(map[interface{}]interface{})
-		err = yaml.Unmarshal(data, &m)
-		if err != nil {
-			return fmt.Errorf("filter_settings could not parse YAML '%s': '%s'",
-				cfg.FilterSettingsPath, err.Error())
-		}
-
-		cfg.FilterSettings = new(FilterSettings)
-		err = mapstructure.Decode(m, cfg.FilterSettings)
-		if err != nil {
-			return fmt.Errorf("receivers.trace2receiver.filter_settings could not decode '%s': '%s'",
-				cfg.FilterSettingsPath, err.Error())
-		}
-
-		cfg.FilterSettings.rulesetDefs = make(map[string]*RSDefinition)
-		for k_rs_name, v_rs_path := range cfg.FilterSettings.RulesetMap {
-			if len(k_rs_name) == 0 || !strings.HasPrefix(k_rs_name, "rs:") || len(v_rs_path) == 0 {
-				return fmt.Errorf("ruleset has invalid name or pathname'%s':'%s'",
-					k_rs_name, v_rs_path)
-			}
-
-			data, err := os.ReadFile(v_rs_path)
-			if err != nil {
-				return fmt.Errorf("ruleset could not read '%s': '%s'",
-					v_rs_path, err.Error())
-			}
-
-			m := make(map[interface{}]interface{})
-			err = yaml.Unmarshal(data, &m)
-			if err != nil {
-				return fmt.Errorf("ruleset could not parse YAML '%s': '%s'",
-					v_rs_path, err.Error())
-			}
-
-			rsdef := new(RSDefinition)
-			err = mapstructure.Decode(m, rsdef)
-			if err != nil {
-				return fmt.Errorf("ruleset could not decode '%s': '%s'", k_rs_name, err.Error())
-			}
-
-			for k_cmd, v_dl := range rsdef.CmdMap {
-				// Commands must map to detail levels and not to another ruleset (to
-				// avoid lookup loops).
-				_, ok := getDetailLevel(v_dl)
-				if len(k_cmd) == 0 || !ok {
-					return fmt.Errorf("ruleset '%s':'%s' has invalid command '%s':'%s'",
-						k_rs_name, v_rs_path, k_cmd, v_dl)
-				}
-			}
-
-			if len(rsdef.Defaults.DetailLevelName) > 0 {
-				// The rulset default detail level must be a detail level and not the
-				// name of another ruleset (to avoid lookup loops).
-				_, ok := getDetailLevel(rsdef.Defaults.DetailLevelName)
-				if !ok {
-					return fmt.Errorf("ruleset '%s':'%s' has invalid default detail level",
-						k_rs_name, v_rs_path)
-				}
-			} else {
-				// If the custom ruleset did not define a ruleset-specific default
-				// detail level, assume the builtin global default.
-				rsdef.Defaults.DetailLevelName = FSDetailLevelDefaultName
-			}
-
-			cfg.FilterSettings.rulesetDefs[k_rs_name] = rsdef
+			return err
 		}
 	}
 

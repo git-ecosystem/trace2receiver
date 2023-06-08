@@ -1,5 +1,14 @@
 package trace2receiver
 
+import (
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/mitchellh/mapstructure"
+	"gopkg.in/yaml.v2"
+)
+
 // FilterSettings describes how we should filter the OTLP output
 // that we generate.  It also describes the special keys that we
 // look for in the Trace2 event stream to help us decide how to
@@ -64,6 +73,87 @@ type FSNicknameMap map[string]string
 // filter settings YML file.  We use this to create the real ruleset
 // table (possibly with lazy loading).
 type FSRulesetMap map[string]string
+
+// Parse `filter.yml` in decode.
+func parseFilterSettings(path string) (*FilterSettings, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("filter_settings could not read '%s': '%s'",
+			path, err.Error())
+	}
+
+	m := make(map[interface{}]interface{})
+	err = yaml.Unmarshal(data, &m)
+	if err != nil {
+		return nil, fmt.Errorf("filter_settings could not parse YAML '%s': '%s'",
+			path, err.Error())
+	}
+
+	fs := new(FilterSettings)
+	err = mapstructure.Decode(m, fs)
+	if err != nil {
+		return nil, fmt.Errorf("receivers.trace2receiver.filter_settings could not decode '%s': '%s'",
+			path, err.Error())
+	}
+
+	// For each custom ruleset [<name> -> <path>] table (the map[string]string),
+	// create a peer entry in the internal [<name> -> <rsdef>] table and preload
+	// the various `ruleset.yml` files.
+	fs.rulesetDefs = make(map[string]*RSDefinition)
+	for k_rs_name, v_rs_path := range fs.RulesetMap {
+		if !strings.HasPrefix(k_rs_name, "rs:") || len(k_rs_name) < 4 || len(v_rs_path) == 0 {
+			return nil, fmt.Errorf("ruleset has invalid name or pathname'%s':'%s'",
+				k_rs_name, v_rs_path)
+		}
+
+		data, err := os.ReadFile(v_rs_path)
+		if err != nil {
+			return nil, fmt.Errorf("ruleset could not read '%s': '%s'",
+				v_rs_path, err.Error())
+		}
+
+		m := make(map[interface{}]interface{})
+		err = yaml.Unmarshal(data, &m)
+		if err != nil {
+			return nil, fmt.Errorf("ruleset could not parse YAML '%s': '%s'",
+				v_rs_path, err.Error())
+		}
+
+		rsdef := new(RSDefinition)
+		err = mapstructure.Decode(m, rsdef)
+		if err != nil {
+			return nil, fmt.Errorf("ruleset could not decode '%s': '%s'", k_rs_name, err.Error())
+		}
+
+		for k_cmd, v_dl := range rsdef.CmdMap {
+			// Commands must map to detail levels and not to another ruleset (to
+			// avoid lookup loops).
+			_, ok := getDetailLevel(v_dl)
+			if len(k_cmd) == 0 || !ok {
+				return nil, fmt.Errorf("ruleset '%s':'%s' has invalid command '%s':'%s'",
+					k_rs_name, v_rs_path, k_cmd, v_dl)
+			}
+		}
+
+		if len(rsdef.Defaults.DetailLevelName) > 0 {
+			// The rulset default detail level must be a detail level and not the
+			// name of another ruleset (to avoid lookup loops).
+			_, ok := getDetailLevel(rsdef.Defaults.DetailLevelName)
+			if !ok {
+				return nil, fmt.Errorf("ruleset '%s':'%s' has invalid default detail level",
+					k_rs_name, v_rs_path)
+			}
+		} else {
+			// If the custom ruleset did not define a ruleset-specific default
+			// detail level, assume the builtin global default.
+			rsdef.Defaults.DetailLevelName = FSDetailLevelDefaultName
+		}
+
+		fs.rulesetDefs[k_rs_name] = rsdef
+	}
+
+	return fs, nil
+}
 
 // For example:
 //
