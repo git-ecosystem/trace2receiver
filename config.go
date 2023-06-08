@@ -102,17 +102,9 @@ func (cfg *Config) Validate() error {
 	}
 
 	if len(cfg.PiiSettingsPath) > 0 {
-		data, err := os.ReadFile(cfg.PiiSettingsPath)
+		cfg.PiiSettings, err = parsePII(cfg.PiiSettingsPath)
 		if err != nil {
-			return fmt.Errorf("pii_settings could not read '%s': '%s'",
-				cfg.PiiSettingsPath, err.Error())
-		}
-
-		cfg.PiiSettings = new(PiiSettings)
-		err = yaml.Unmarshal(data, cfg.PiiSettings)
-		if err != nil {
-			return fmt.Errorf("pii_settings could not parse '%s': '%s'",
-				cfg.PiiSettingsPath, err.Error())
+			return err
 		}
 	}
 
