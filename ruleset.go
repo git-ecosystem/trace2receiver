@@ -1,5 +1,13 @@
 package trace2receiver
 
+import (
+	"fmt"
+	"os"
+
+	"github.com/mitchellh/mapstructure"
+	"gopkg.in/yaml.v2"
+)
+
 // RSDefinition captures the content of a custom ruleset YML file.
 type RSDefinition struct {
 	CmdMap   RSCmdMap   `mapstructure:"commands"`
@@ -22,4 +30,53 @@ type RSDefaults struct {
 	// The default detail level to use when exec+verb+mode
 	// lookup fails.
 	DetailLevelName string `mapstructure:"detail"`
+}
+
+// Parse a `ruleset.yml` and decode.
+func parseRuleset(path string) (*RSDefinition, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("ruleset could not read '%s': '%s'",
+			path, err.Error())
+	}
+
+	m := make(map[interface{}]interface{})
+	err = yaml.Unmarshal(data, &m)
+	if err != nil {
+		return nil, fmt.Errorf("ruleset could not parse YAML '%s': '%s'",
+			path, err.Error())
+	}
+
+	rsdef := new(RSDefinition)
+	err = mapstructure.Decode(m, rsdef)
+	if err != nil {
+		return nil, fmt.Errorf("ruleset could not decode '%s': '%s'",
+			path, err.Error())
+	}
+
+	for k_cmd, v_dl := range rsdef.CmdMap {
+		// Commands must map to detail levels and not to another ruleset (to
+		// avoid lookup loops).
+		_, ok := getDetailLevel(v_dl)
+		if len(k_cmd) == 0 || !ok {
+			return nil, fmt.Errorf("ruleset '%s' has invalid command '%s':'%s'",
+				path, k_cmd, v_dl)
+		}
+	}
+
+	if len(rsdef.Defaults.DetailLevelName) > 0 {
+		// The rulset default detail level must be a detail level and not the
+		// name of another ruleset (to avoid lookup loops).
+		_, ok := getDetailLevel(rsdef.Defaults.DetailLevelName)
+		if !ok {
+			return nil, fmt.Errorf("ruleset '%s' has invalid default detail level",
+				path)
+		}
+	} else {
+		// If the custom ruleset did not define a ruleset-specific default
+		// detail level, assume the builtin global default.
+		rsdef.Defaults.DetailLevelName = FSDetailLevelDefaultName
+	}
+
+	return rsdef, nil
 }

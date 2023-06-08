@@ -96,7 +96,7 @@ func parseFilterSettings(path string) (*FilterSettings, error) {
 			path, err.Error())
 	}
 
-	// For each custom ruleset [<name> -> <path>] table (the map[string]string),
+	// For each custom ruleset [<name> -> <path>] in the table (the map[string]string),
 	// create a peer entry in the internal [<name> -> <rsdef>] table and preload
 	// the various `ruleset.yml` files.
 	fs.rulesetDefs = make(map[string]*RSDefinition)
@@ -106,50 +106,10 @@ func parseFilterSettings(path string) (*FilterSettings, error) {
 				k_rs_name, v_rs_path)
 		}
 
-		data, err := os.ReadFile(v_rs_path)
+		fs.rulesetDefs[k_rs_name], err = parseRuleset(v_rs_path)
 		if err != nil {
-			return nil, fmt.Errorf("ruleset could not read '%s': '%s'",
-				v_rs_path, err.Error())
+			return nil, err
 		}
-
-		m := make(map[interface{}]interface{})
-		err = yaml.Unmarshal(data, &m)
-		if err != nil {
-			return nil, fmt.Errorf("ruleset could not parse YAML '%s': '%s'",
-				v_rs_path, err.Error())
-		}
-
-		rsdef := new(RSDefinition)
-		err = mapstructure.Decode(m, rsdef)
-		if err != nil {
-			return nil, fmt.Errorf("ruleset could not decode '%s': '%s'", k_rs_name, err.Error())
-		}
-
-		for k_cmd, v_dl := range rsdef.CmdMap {
-			// Commands must map to detail levels and not to another ruleset (to
-			// avoid lookup loops).
-			_, ok := getDetailLevel(v_dl)
-			if len(k_cmd) == 0 || !ok {
-				return nil, fmt.Errorf("ruleset '%s':'%s' has invalid command '%s':'%s'",
-					k_rs_name, v_rs_path, k_cmd, v_dl)
-			}
-		}
-
-		if len(rsdef.Defaults.DetailLevelName) > 0 {
-			// The rulset default detail level must be a detail level and not the
-			// name of another ruleset (to avoid lookup loops).
-			_, ok := getDetailLevel(rsdef.Defaults.DetailLevelName)
-			if !ok {
-				return nil, fmt.Errorf("ruleset '%s':'%s' has invalid default detail level",
-					k_rs_name, v_rs_path)
-			}
-		} else {
-			// If the custom ruleset did not define a ruleset-specific default
-			// detail level, assume the builtin global default.
-			rsdef.Defaults.DetailLevelName = FSDetailLevelDefaultName
-		}
-
-		fs.rulesetDefs[k_rs_name] = rsdef
 	}
 
 	return fs, nil
