@@ -82,8 +82,14 @@ func parseFilterSettings(path string) (*FilterSettings, error) {
 			path, err.Error())
 	}
 
+	return parseFilterSettingsFromBuffer(data, path)
+}
+
+// Parse a buffer containing the contents of a `filter.yml` and decode.
+// This separation is primarily for writing test code.
+func parseFilterSettingsFromBuffer(data []byte, path string) (*FilterSettings, error) {
 	m := make(map[interface{}]interface{})
-	err = yaml.Unmarshal(data, &m)
+	err := yaml.Unmarshal(data, &m)
 	if err != nil {
 		return nil, fmt.Errorf("filter_settings could not parse YAML '%s': '%s'",
 			path, err.Error())
@@ -115,6 +121,19 @@ func parseFilterSettings(path string) (*FilterSettings, error) {
 	return fs, nil
 }
 
+// Add a ruleset to the filter settings.  This is primarily for writing test code.
+func (fs *FilterSettings) addRuleset(rs_name string, path string, rsdef *RSDefinition) {
+	if fs.RulesetMap == nil {
+		fs.RulesetMap = make(FSRulesetMap)
+	}
+	fs.RulesetMap[rs_name] = path
+
+	if fs.rulesetDefs == nil {
+		fs.rulesetDefs = make(map[string]*RSDefinition)
+	}
+	fs.rulesetDefs[rs_name] = rsdef
+}
+
 // For example:
 //
 // Tell Git to send a `def_param` for all config settings with
@@ -127,14 +146,14 @@ func parseFilterSettings(path string) (*FilterSettings, error) {
 // names are).
 //
 // $ cd /path/to/my/workrepo/
-// $ git config --local otel.trace2.repoid "monorepo"
+// $ git config --local otel.trace2.nickname "monorepo"
 //
 // Tell Git that my duplicate workrepo worktree is another
 // instance of the same "monorepo" (so data from both repos
 // can be aggregated in the cloud).
 //
 // $ cd /path/to/my/workrepo-copy/
-// $ git config --local otel.trace2.repoid "monorepo"
+// $ git config --local otel.trace2.nickname "monorepo"
 //
 //
 //
@@ -142,14 +161,14 @@ func parseFilterSettings(path string) (*FilterSettings, error) {
 // (or is a member of a group distinct from my other repos).
 //
 // $ cd /path/to/my/privaterepo
-// $ git config --local otel.trace2.repoid "private"
+// $ git config --local otel.trace2.nickname "private"
 //
 // Tell Git that my other worktree should be filtered using
-// "my-custom-ruleset" (regardless of whether there is a nickname
-// defined for it).
+// the "rs:xyz" ruleset (regardless of whether there is a nickname
+// defined for the worktree).
 //
 // $ cd /path/to/my/otherrepo
-// $ git config --local otel.trace2.ruleset "my-custom-ruleset"
+// $ git config --local otel.trace2.ruleset "rs:xyz"
 //
 //
 // filter.yml
@@ -168,3 +187,23 @@ func parseFilterSettings(path string) (*FilterSettings, error) {
 //
 // defaults:
 //   ruleset: "dl:summary"
+//
+//
+// rulesets/rs-status.yml
+// ======================
+// commands:
+//   "git:status": "dl:verbose"
+//
+// defaults:
+//   detail: "dl:drop"
+//
+//
+// rulesets/rs-xyz.yml
+// ===================
+// commands:
+//   "git:fetch": "dl:verbose"
+//   "git:pull": "dl:verbose"
+//   "git:status": "dl:summary"
+//
+// defaults:
+//   detail: "dl:drop"

@@ -12,18 +12,18 @@ func debugDescribe(base string, lval string, rval string) string {
 
 // Try to lookup the name of the custom ruleset or detail level using
 // value passed in the `def_param` for the `Ruleset Key`.
-func (tr2 *trace2Dataset) lookupFilterByRulesetKey() (string, bool, string) {
-	rskey := tr2.rcvr_base.RcvrConfig.FilterSettings.NamespaceKeys.RulesetKey
+func lookupFilterByRulesetKey(fs *FilterSettings, params map[string]string, debug string) (string, bool, string) {
+	rskey := fs.NamespaceKeys.RulesetKey
 	if len(rskey) == 0 {
-		return "", false, ""
+		return "", false, debug
 	}
 
-	rsdl_value, ok := tr2.process.paramSetValues[rskey]
+	rsdl_value, ok := params[rskey]
 	if !ok || len(rsdl_value) == 0 {
-		return "", false, ""
+		return "", false, debug
 	}
 
-	debug := debugDescribe("", "rskey", rsdl_value)
+	debug = debugDescribe(debug, "rskey", rsdl_value)
 
 	return rsdl_value, true, debug
 }
@@ -31,23 +31,25 @@ func (tr2 *trace2Dataset) lookupFilterByRulesetKey() (string, bool, string) {
 // Lookup ruleset or detail level name based upon the nickname (if the
 // key is defined in the filter settings and if the worktree sent
 // a def_param for it).
-func (tr2 *trace2Dataset) lookupFilterByNickname() (string, bool, string) {
-	nnkey := tr2.rcvr_base.RcvrConfig.FilterSettings.NamespaceKeys.NicknameKey
+func lookupFilterByNickname(fs *FilterSettings, params map[string]string, debug string) (string, bool, string) {
+	nnkey := fs.NamespaceKeys.NicknameKey
 	if len(nnkey) == 0 {
-		return "", false, ""
+		return "", false, debug
 	}
 
-	nnvalue, ok := tr2.process.paramSetValues[nnkey]
+	nnvalue, ok := params[nnkey]
 	if !ok || len(nnvalue) == 0 {
-		return "", false, ""
+		return "", false, debug
 	}
 
-	rsdl_value, ok := tr2.rcvr_base.RcvrConfig.FilterSettings.NicknameMap[nnvalue]
+	debug = debugDescribe(debug, "nickname", nnvalue)
+
+	rsdl_value, ok := fs.NicknameMap[nnvalue]
 	if !ok || len(rsdl_value) == 0 {
-		return "", false, ""
+		debug := debugDescribe(debug, nnvalue, "UNKNOWN")
+		return "", false, debug
 	}
 
-	debug := debugDescribe("", "nickname", nnvalue)
 	debug = debugDescribe(debug, nnvalue, rsdl_value)
 
 	return rsdl_value, true, debug
@@ -55,33 +57,37 @@ func (tr2 *trace2Dataset) lookupFilterByNickname() (string, bool, string) {
 
 // Lookup the default ruleset or detail level from the global defaults
 // section in the filter settings.
-func (tr2 *trace2Dataset) lookupFilterDefaultRulesetName() (string, bool, string) {
-	rsdl := tr2.rcvr_base.RcvrConfig.FilterSettings.Defaults.RulesetName
+func lookupFilterDefaultRulesetName(fs *FilterSettings, debug string) (string, bool, string) {
+	rsdl := fs.Defaults.RulesetName
 	if len(rsdl) == 0 {
-		return "", false, ""
+		return "", false, debug
 	}
 
-	debug := debugDescribe("", "defaults", rsdl)
+	debug = debugDescribe(debug, "default-ruleset", rsdl)
 
 	return rsdl, true, debug
 }
 
 // Compute the net-net detail level that we should use for this Git command.
-func (tr2 *trace2Dataset) computeDetailLevel() (FSDetailLevel, string) {
+func computeDetailLevel(fs *FilterSettings, params map[string]string,
+	qn QualifiedNames) (FSDetailLevel, string) {
+
+	var debug string
+
 	// If the command sent a `def_param` "Ruleset Key", use it.
-	rsdl_value, ok, debug := tr2.lookupFilterByRulesetKey()
+	rsdl_value, ok, debug := lookupFilterByRulesetKey(fs, params, debug)
 	if !ok {
 		// Otherwise, if the command sent a `def_param` "Repo Id Key"
 		// that has mapping, use it.
-		rsdl_value, ok, debug = tr2.lookupFilterByNickname()
+		rsdl_value, ok, debug = lookupFilterByNickname(fs, params, debug)
 		if !ok {
 			// Otherwise, if the filter settings defined a global default
 			// ruleset, use it.
-			rsdl_value, ok, debug = tr2.lookupFilterDefaultRulesetName()
+			rsdl_value, ok, debug = lookupFilterDefaultRulesetName(fs, debug)
 			if !ok {
 				// Otherwise, apply the builtin default detail level.
 				rsdl_value = FSDetailLevelDefaultName
-				debug = debugDescribe("", "builtin-default", rsdl_value)
+				debug = debugDescribe(debug, "builtin-default", rsdl_value)
 			}
 		}
 	}
@@ -95,20 +101,20 @@ func (tr2 *trace2Dataset) computeDetailLevel() (FSDetailLevel, string) {
 	}
 
 	// Try to look it up as a custom ruleset.
-	rsdef, ok := tr2.rcvr_base.RcvrConfig.FilterSettings.rulesetDefs[rsdl_value]
+	rsdef, ok := fs.rulesetDefs[rsdl_value]
 	if !ok {
+		debug = debugDescribe(debug, rsdl_value, "INVALID")
+
 		// We do not have a ruleset with that name.  Silently assume the builtin
 		// default detail level.
 		dl, _ := getDetailLevel(FSDetailLevelDefaultName)
-
-		debug = debugDescribe(debug, rsdl_value, "INVALID")
 		debug = debugDescribe(debug, "builtin-default", FSDetailLevelDefaultName)
 		return dl, debug
 	}
 
 	// Use the requested ruleset.
 
-	debug = debugDescribe(debug, "command", tr2.process.qualifiedExeVerbModeName)
+	debug = debugDescribe(debug, "command", qn.qualifiedExeVerbModeName)
 
 	// See if there is an entry in the CmdMap for this Git command.
 	//
@@ -116,17 +122,17 @@ func (tr2 *trace2Dataset) computeDetailLevel() (FSDetailLevel, string) {
 	// a match.  Then fallback to the ruleset default.  We assume that the CmdMap
 	// only has detail level values (and not links to other custom rulesets), so
 	// we won't get lookup cycles.
-	dl_name, ok := rsdef.CmdMap[tr2.process.qualifiedExeVerbModeName]
+	dl_name, ok := rsdef.CmdMap[qn.qualifiedExeVerbModeName]
 	if ok {
-		debug = debugDescribe(debug, tr2.process.qualifiedExeVerbModeName, dl_name)
+		debug = debugDescribe(debug, qn.qualifiedExeVerbModeName, dl_name)
 	} else {
-		dl_name, ok = rsdef.CmdMap[tr2.process.qualifiedExeVerbName]
+		dl_name, ok = rsdef.CmdMap[qn.qualifiedExeVerbName]
 		if ok {
-			debug = debugDescribe(debug, tr2.process.qualifiedExeVerbName, dl_name)
+			debug = debugDescribe(debug, qn.qualifiedExeVerbName, dl_name)
 		} else {
-			dl_name, ok = rsdef.CmdMap[tr2.process.qualifiedExeBaseName]
+			dl_name, ok = rsdef.CmdMap[qn.qualifiedExeBaseName]
 			if ok {
-				debug = debugDescribe(debug, tr2.process.qualifiedExeBaseName, dl_name)
+				debug = debugDescribe(debug, qn.qualifiedExeBaseName, dl_name)
 			} else {
 				// Use the ruleset default detail level.  (This was set to the global
 				// default detail level if it wasn't set in the ruleset YML.)

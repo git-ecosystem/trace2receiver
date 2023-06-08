@@ -40,8 +40,14 @@ func parseRuleset(path string) (*RSDefinition, error) {
 			path, err.Error())
 	}
 
+	return parseRulesetFromBuffer(data, path)
+}
+
+// Parse a buffer containing the contents of a `ruleset.yml` and decode.
+// This separation is primarily for writing test code.
+func parseRulesetFromBuffer(data []byte, path string) (*RSDefinition, error) {
 	m := make(map[interface{}]interface{})
-	err = yaml.Unmarshal(data, &m)
+	err := yaml.Unmarshal(data, &m)
 	if err != nil {
 		return nil, fmt.Errorf("ruleset could not parse YAML '%s': '%s'",
 			path, err.Error())
