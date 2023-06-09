@@ -333,7 +333,7 @@ func Test_Dataset_Basic(t *testing.T) {
 		x_make_atexit(), // Should be last
 	}
 
-	tr2, sufficient := load_test_dataset(t, events)
+	tr2, sufficient, _ := load_test_dataset(t, events)
 	assert.True(t, sufficient, "have sufficient data")
 
 	assert.Equal(t, tr2.trace2SID, x_sid)
@@ -393,7 +393,7 @@ func Test_Dataset_Argv0_with_Dot(t *testing.T) {
 		x_make_atexit(), // Should be last
 	}
 
-	tr2, sufficient := load_test_dataset(t, events)
+	tr2, sufficient, _ := load_test_dataset(t, events)
 	assert.True(t, sufficient, "have sufficient data")
 
 	assert.Equal(t, tr2.trace2SID, x_sid)
@@ -428,7 +428,7 @@ func Test_Dataset_Error(t *testing.T) {
 		x_make_atexit(), // Should be last
 	}
 
-	tr2, sufficient := load_test_dataset(t, events)
+	tr2, sufficient, _ := load_test_dataset(t, events)
 	assert.True(t, sufficient, "have sufficient data")
 
 	// Only the first error message is reported.
@@ -449,7 +449,7 @@ func Test_Dataset_DefParam_Easy(t *testing.T) {
 		x_make_atexit(), // Should be last
 	}
 
-	tr2, sufficient := load_test_dataset(t, events)
+	tr2, sufficient, _ := load_test_dataset(t, events)
 	assert.True(t, sufficient, "have sufficient data")
 
 	assert.NotNil(t, tr2.process.paramSetValues["foo"])
@@ -479,7 +479,7 @@ func Test_Dataset_DefParam_Scoped(t *testing.T) {
 		x_make_atexit(), // Should be last
 	}
 
-	tr2, sufficient := load_test_dataset(t, events)
+	tr2, sufficient, _ := load_test_dataset(t, events)
 	assert.True(t, sufficient, "have sufficient data")
 
 	assert.Equal(t, len(tr2.process.paramSetValues), 2)
@@ -508,7 +508,7 @@ func Test_Dataset_ChildProcesses(t *testing.T) {
 		x_make_atexit(), // Should be last
 	}
 
-	tr2, sufficient := load_test_dataset(t, events)
+	tr2, sufficient, _ := load_test_dataset(t, events)
 	assert.True(t, sufficient, "have sufficient data")
 
 	assert.Equal(t, len(tr2.children), 3)
@@ -563,7 +563,7 @@ func Test_Dataset_Regions_Main(t *testing.T) {
 		x_make_atexit(), // Should be last
 	}
 
-	tr2, sufficient := load_test_dataset(t, events)
+	tr2, sufficient, _ := load_test_dataset(t, events)
 	assert.True(t, sufficient, "have sufficient data")
 
 	assert.Equal(t, len(tr2.process.mainThread.regionStack), 0)
@@ -613,7 +613,7 @@ func Test_Dataset_Data_ProcessLevel(t *testing.T) {
 		x_make_atexit(), // Should be last
 	}
 
-	tr2, sufficient := load_test_dataset(t, events)
+	tr2, sufficient, _ := load_test_dataset(t, events)
 	assert.True(t, sufficient, "have sufficient data")
 
 	assert.Equal(t, len(tr2.process.dataValues), 3) // [cat1, cat2, cat3]
@@ -694,7 +694,7 @@ func Test_Dataset_Timers_Main(t *testing.T) {
 		x_make_atexit(), // Should be last
 	}
 
-	tr2, sufficient := load_test_dataset(t, events)
+	tr2, sufficient, _ := load_test_dataset(t, events)
 	assert.True(t, sufficient, "have sufficient data")
 
 	assert.NotNil(t, tr2.process.timers)
@@ -728,7 +728,7 @@ func Test_Dataset_Counters_Main(t *testing.T) {
 		x_make_atexit(), // Should be last
 	}
 
-	tr2, sufficient := load_test_dataset(t, events)
+	tr2, sufficient, _ := load_test_dataset(t, events)
 	assert.True(t, sufficient, "have sufficient data")
 
 	assert.NotNil(t, tr2.process.counters)
@@ -761,7 +761,7 @@ func Test_Dataset_Threads(t *testing.T) {
 		x_make_atexit(), // Should be last
 	}
 
-	tr2, sufficient := load_test_dataset(t, events)
+	tr2, sufficient, _ := load_test_dataset(t, events)
 	assert.True(t, sufficient, "have sufficient data")
 
 	assert.Equal(t, len(tr2.threads), 2)
@@ -801,7 +801,7 @@ func Test_Dataset_ThreadRegions(t *testing.T) {
 		x_make_atexit(), // Should be last
 	}
 
-	tr2, sufficient := load_test_dataset(t, events)
+	tr2, sufficient, _ := load_test_dataset(t, events)
 	assert.True(t, sufficient, "have sufficient data")
 
 	assert.Equal(t, len(tr2.threads), 2)
@@ -843,8 +843,9 @@ func Test_Dataset_HaveStart(t *testing.T) {
 		x_make_atexit(), // Should be last
 	}
 
-	_, sufficient := load_test_dataset(t, events)
+	_, sufficient, err := load_test_dataset(t, events)
 	assert.False(t, sufficient, "have sufficient data")
+	assert.Nil(t, err)
 }
 
 // Verify that when cmd_name is "_run_dashed_" that we compose
@@ -865,7 +866,7 @@ func Test_Dataset_RunDashed_Valid(t *testing.T) {
 		x_make_atexit(), // Should be last
 	}
 
-	tr2, sufficient := load_test_dataset(t, events)
+	tr2, sufficient, _ := load_test_dataset(t, events)
 	assert.True(t, sufficient, "have sufficient data")
 
 	assert.Equal(t, tr2.trace2SID, x_sid)
@@ -890,7 +891,7 @@ func Test_Dataset_RunDashed_Invalid(t *testing.T) {
 		x_make_atexit(), // Should be last
 	}
 
-	tr2, sufficient := load_test_dataset(t, events)
+	tr2, sufficient, _ := load_test_dataset(t, events)
 	assert.True(t, sufficient, "have sufficient data")
 
 	assert.Equal(t, tr2.trace2SID, x_sid)
@@ -900,9 +901,34 @@ func Test_Dataset_RunDashed_Invalid(t *testing.T) {
 	assert.Equal(t, tr2.process.qn.qualifiedExeVerbModeName, "xx:_run_dashed_#x-mode")
 }
 
+func Test_Dataset_RejectClient_FSMonitor(t *testing.T) {
+
+	var events []string = []string{
+		x_make_version(),
+		x_make_start_argv1("xx"),
+		x_make_cmd_name_nh("fsmonitor--daemon", "qq"),
+		x_make_cmd_mode(),
+		x_make_alias(),
+
+		x_make_def_repo(1, x_repo_1_worktree),
+		x_make_def_repo(3, x_repo_3_worktree), // non-contiguous
+
+		x_make_atexit(), // Should be last
+	}
+
+	tr2, sufficient, err := load_test_dataset(t, events)
+	assert.Nil(t, tr2)
+	assert.False(t, sufficient)
+	assert.NotNil(t, err)
+
+	rce, ok := err.(*RejectClientError)
+	assert.True(t, ok)
+	assert.True(t, rce.FSMonitor)
+}
+
 // Given an array of raw Trace2 messages, parse and appy them
 // to a newly created dataset.
-func load_test_dataset(t *testing.T, events []string) (tr2 *trace2Dataset, sufficient bool) {
+func load_test_dataset(t *testing.T, events []string) (tr2 *trace2Dataset, sufficient bool, err error) {
 	tr2 = NewTrace2Dataset(nil)
 
 	for _, s := range events {
@@ -920,11 +946,14 @@ func load_test_dataset(t *testing.T, events []string) (tr2 *trace2Dataset, suffi
 
 		err = evt_apply(tr2, evt)
 		if err != nil {
+			if rce, ok := err.(*RejectClientError); ok {
+				return nil, false, rce
+			}
 			t.Fatalf("apply of '%s' failed: %s", s, err.Error())
 		}
 	}
 
 	sufficient = tr2.prepareDataset()
 
-	return tr2, sufficient
+	return tr2, sufficient, nil
 }

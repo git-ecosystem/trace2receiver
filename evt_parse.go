@@ -145,6 +145,11 @@ func processRawLine(rawLine []byte, tr2 *trace2Dataset, logger *zap.Logger, allo
 
 		err = evt_apply(tr2, evt)
 		if err != nil {
+			if rce, ok := err.(*RejectClientError); ok {
+				// Silently reject the client without logging an error.
+				logger.Debug(rce.Error())
+				return rce
+			}
 			logger.Error(err.Error())
 			return err
 		}

@@ -168,6 +168,40 @@ func apply__cmd_ancestry(tr2 *trace2Dataset, evt *TrEvent) (err error) {
 }
 
 func apply__cmd_name(tr2 *trace2Dataset, evt *TrEvent) (err error) {
+
+	// There are some very long-running Git commands that we probably
+	// never want to collect telemetry for, such as a background
+	// `git fsmonitor--daemon run`.  This is likely to be started
+	// automatically without the user knowing it.  It will connect
+	// and send telemetry and consume resources in our service
+	// until it is stopped, since we cannot send the process span
+	// until the process exits.  Meanwhile, we may collect days-worth
+	// of region and thread data for the fsmonitor daemon.  This data
+	// would be associated with (probably) the first `git status` that
+	// (ran days ago and) caused the fsmonitor daemon to be started in
+	// the background.  This is just not useful data and will bog
+	// down the telemetry service.  So throw an error here and cause
+	// the socket to be dropped (safely causing the fsmonitor daemon
+	// to silently close the client side and stop trying to send data)
+	// and discard the preliminary telemetry for this process.
+	//
+	// This may be a bit of a hammer because it will also drop
+	// telemetry for `git fsmonitor--daemon start` and `... stop`
+	// foreground commands, but I'm OK with that.  (Fsmonitor only
+	// sends `cmd_name` (aka verb) events but not `cmd_mode` events.
+	// We could fix that upstream or pick thru the argv, but it's not
+	// worth the effort right now.)
+	//
+	// TODO There are other long-running services that we should
+	// reject here, such as `git daemon` or a future bundle server,
+	// but these are not likely to be automatically started and be
+	// running on a client machine, so I'll leave that for the
+	// future.
+
+	if err := IsFSMonitorDaemon(evt.pm_cmd_name.mf_name); err != nil {
+		return err
+	}
+
 	tr2.process.cmdVerb = evt.pm_cmd_name.mf_name
 	tr2.process.cmdHierarchy = evt.pm_cmd_name.mf_hierarchy
 
