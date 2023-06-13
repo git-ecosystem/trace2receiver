@@ -20,7 +20,8 @@ const (
 	FSDetailLevelProcessName string = "dl:process"
 	FSDetailLevelVerboseName string = "dl:verbose"
 
-	FSDetailLevelDefaultName string = FSDetailLevelSummaryName
+	FSDetailLevelDefaultName string        = FSDetailLevelSummaryName
+	FSDetailLevelDefault     FSDetailLevel = FSDetailLevelSummary
 )
 
 // Convert a detail level name or ruleset name into a detail level id.

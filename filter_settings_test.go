@@ -287,3 +287,35 @@ func x_TryLoadRuleset(t *testing.T, fs *FilterSettings, name string, path string
 
 	fs.addRuleset(name, path, rs)
 }
+
+// //////////////////////////////////////////////////////////////
+
+func Test_Nil_Nil_FilterSettings(t *testing.T) {
+
+	dl, dl_debug := computeDetailLevel(nil, nil, x_qn)
+
+	assert.Equal(t, FSDetailLevelSummary, dl)
+	assert.Equal(t, "[builtin-default -> dl:summary]", dl_debug)
+}
+
+func Test_FSEmpty_Nil_FilterSettings(t *testing.T) {
+
+	fs := x_TryLoadFilterSettings(t, x_fs_empty_yml, x_fs_path)
+
+	dl, dl_debug := computeDetailLevel(fs, nil, x_qn)
+
+	assert.Equal(t, FSDetailLevelSummary, dl)
+	assert.Equal(t, "[builtin-default -> dl:summary]", dl_debug)
+}
+
+func Test_FSNNKey_Nil_FilterSettings(t *testing.T) {
+
+	fs := x_TryLoadFilterSettings(t, x_fs_nnkey_yml, x_fs_path)
+	x_TryLoadRuleset(t, fs, x_rs_rsdef0_name, x_rs_path, x_rs_rsdef0_yml)
+	x_TryLoadRuleset(t, fs, x_rs_rsdef1_name, x_rs_path, x_rs_rsdef1_yml)
+
+	dl, dl_debug := computeDetailLevel(fs, nil, x_qn)
+
+	assert.Equal(t, FSDetailLevelProcess, dl)
+	assert.Equal(t, "[default-ruleset -> rs:rsdef0]/[command -> c:v#m]/[ruleset-default -> dl:process]", dl_debug)
+}

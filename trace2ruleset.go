@@ -68,16 +68,28 @@ func lookupFilterDefaultRulesetName(fs *FilterSettings, debug string) (string, b
 	return rsdl, true, debug
 }
 
+func useBuiltinDefaultDetailLevel(debug string) (FSDetailLevel, string) {
+	dl := FSDetailLevelDefault
+	debug = debugDescribe(debug, "builtin-default", FSDetailLevelDefaultName)
+	return dl, debug
+}
+
 // Compute the net-net detail level that we should use for this Git command.
 func computeDetailLevel(fs *FilterSettings, params map[string]string,
 	qn QualifiedNames) (FSDetailLevel, string) {
 
+	if fs == nil {
+		// No filter-spec, assume global builtin default detail level.
+		return useBuiltinDefaultDetailLevel("")
+	}
+
 	var debug string
 
-	// If the command sent a `def_param` "Ruleset Key", use it.
+	// If the command sent a `def_param` with the "Ruleset Key" that
+	// is known, use it.
 	rsdl_value, ok, debug := lookupFilterByRulesetKey(fs, params, debug)
 	if !ok {
-		// Otherwise, if the command sent a `def_param` "Repo Id Key"
+		// Otherwise, if the command sent a `def_param` with the "Nickname Key"
 		// that has mapping, use it.
 		rsdl_value, ok, debug = lookupFilterByNickname(fs, params, debug)
 		if !ok {
@@ -86,8 +98,7 @@ func computeDetailLevel(fs *FilterSettings, params map[string]string,
 			rsdl_value, ok, debug = lookupFilterDefaultRulesetName(fs, debug)
 			if !ok {
 				// Otherwise, apply the builtin default detail level.
-				rsdl_value = FSDetailLevelDefaultName
-				debug = debugDescribe(debug, "builtin-default", rsdl_value)
+				return useBuiltinDefaultDetailLevel(debug)
 			}
 		}
 	}
@@ -107,9 +118,7 @@ func computeDetailLevel(fs *FilterSettings, params map[string]string,
 
 		// We do not have a ruleset with that name.  Silently assume the builtin
 		// default detail level.
-		dl, _ := getDetailLevel(FSDetailLevelDefaultName)
-		debug = debugDescribe(debug, "builtin-default", FSDetailLevelDefaultName)
-		return dl, debug
+		return useBuiltinDefaultDetailLevel(debug)
 	}
 
 	// Use the requested ruleset.
