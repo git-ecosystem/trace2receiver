@@ -46,7 +46,7 @@ type Config struct {
 	AllowCommandControlVerbs bool `mapstructure:"enable_commands"`
 
 	// Pathname to YML file containing PII settings.
-	PiiSettingsPath string `mapstructure:"pii_settings"`
+	PiiSettingsPath string `mapstructure:"pii"`
 	PiiSettings     *PiiSettings
 
 	// Pathname to YML file containing our filter settings.

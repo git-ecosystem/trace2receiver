@@ -34,10 +34,10 @@ func (rcvr_base *Rcvr_Base) Start(unused_ctx context.Context, host component.Hos
 	}
 
 	if rcvr_base.RcvrConfig.PiiSettings != nil {
-		if rcvr_base.RcvrConfig.PiiSettings.IncludeHostname {
+		if rcvr_base.RcvrConfig.PiiSettings.Include.Hostname {
 			rcvr_base.Logger.Info("PII: Hostname logging is enabled")
 		}
-		if rcvr_base.RcvrConfig.PiiSettings.IncludeUsername {
+		if rcvr_base.RcvrConfig.PiiSettings.Include.Username {
 			rcvr_base.Logger.Info("PII: Username logging is enabled")
 		}
 	}

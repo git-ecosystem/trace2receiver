@@ -40,13 +40,13 @@ func createTraces(_ context.Context,
 // possibly the connection from the client process.
 // Add any requested PII data to `tr2.pii[]`.
 func (tr2 *trace2Dataset) pii_gather(cfg *Config, conn *net.UnixConn) {
-	if cfg.PiiSettings != nil && cfg.PiiSettings.IncludeHostname {
+	if cfg.PiiSettings != nil && cfg.PiiSettings.Include.Hostname {
 		if h, err := os.Hostname(); err == nil {
 			tr2.pii[string(Trace2PiiHostname)] = h
 		}
 	}
 
-	if cfg.PiiSettings != nil && cfg.PiiSettings.IncludeUsername {
+	if cfg.PiiSettings != nil && cfg.PiiSettings.Include.Username {
 		if u, err := getPeerUsername(conn); err == nil {
 			tr2.pii[string(Trace2PiiUsername)] = u
 		}
