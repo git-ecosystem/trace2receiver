@@ -50,7 +50,7 @@ type Config struct {
 	PiiSettings     *PiiSettings
 
 	// Pathname to YML file containing our filter settings.
-	FilterSettingsPath string `mapstructure:"filter_settings"`
+	FilterSettingsPath string `mapstructure:"filter"`
 	FilterSettings     *FilterSettings
 }
 

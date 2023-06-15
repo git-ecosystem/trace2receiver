@@ -78,7 +78,7 @@ type FSRulesetMap map[string]string
 func parseFilterSettings(path string) (*FilterSettings, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("filter_settings could not read '%s': '%s'",
+		return nil, fmt.Errorf("could not read filter settings '%s': '%s'",
 			path, err.Error())
 	}
 
@@ -91,14 +91,14 @@ func parseFilterSettingsFromBuffer(data []byte, path string) (*FilterSettings, e
 	m := make(map[interface{}]interface{})
 	err := yaml.Unmarshal(data, &m)
 	if err != nil {
-		return nil, fmt.Errorf("filter_settings could not parse YAML '%s': '%s'",
+		return nil, fmt.Errorf("could not parse filter YAML '%s': '%s'",
 			path, err.Error())
 	}
 
 	fs := new(FilterSettings)
 	err = mapstructure.Decode(m, fs)
 	if err != nil {
-		return nil, fmt.Errorf("receivers.trace2receiver.filter_settings could not decode '%s': '%s'",
+		return nil, fmt.Errorf("could not decode filter settings '%s': '%s'",
 			path, err.Error())
 	}
 
