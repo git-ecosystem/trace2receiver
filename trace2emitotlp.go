@@ -110,7 +110,7 @@ func (tr2 *trace2Dataset) ToTraces() ptrace.Traces {
 	exeSpan := scopes.Spans().AppendEmpty()
 	emitProcessSpan(&exeSpan, tr2)
 
-	if tr2.dl == FSDetailLevelVerbose {
+	if tr2.dl == DetailLevelVerbose {
 		// Create an OTEL span for the lifetime of each non-main thread.
 		for _, th := range tr2.threads {
 			thSpan := scopes.Spans().AppendEmpty()
@@ -124,7 +124,7 @@ func (tr2 *trace2Dataset) ToTraces() ptrace.Traces {
 		}
 	}
 
-	if tr2.dl == FSDetailLevelProcess || tr2.dl == FSDetailLevelVerbose {
+	if tr2.dl == DetailLevelProcess || tr2.dl == DetailLevelVerbose {
 		// Create an OTEL span for each child process that this process created.
 		for _, child := range tr2.children {
 			childSpan := scopes.Spans().AppendEmpty()
@@ -219,7 +219,7 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
 		sm.PutStr(string(Trace2CmdArgv), string(jargs))
 	}
 
-	if tr2.dl == FSDetailLevelProcess || tr2.dl == FSDetailLevelVerbose {
+	if tr2.dl == DetailLevelProcess || tr2.dl == DetailLevelVerbose {
 		if len(tr2.process.cmdAncestry) > 0 {
 			jargs, _ := json.Marshal(tr2.process.cmdAncestry)
 			sm.PutStr(string(Trace2CmdAncestry), string(jargs))
@@ -252,14 +252,14 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
 		sm.PutStr(string(Trace2ParamSet), string(jargs))
 	}
 
-	if tr2.dl == FSDetailLevelProcess || tr2.dl == FSDetailLevelVerbose {
+	if tr2.dl == DetailLevelProcess || tr2.dl == DetailLevelVerbose {
 		if tr2.process.dataValues != nil && len(tr2.process.dataValues) > 0 {
 			jargs, _ := json.Marshal(tr2.process.dataValues)
 			sm.PutStr(string(Trace2ProcessData), string(jargs))
 		}
 	}
 
-	if tr2.dl == FSDetailLevelVerbose {
+	if tr2.dl == DetailLevelVerbose {
 		// Emit per-thread counters and timers for the main thread because
 		// it is not handled by `emitNonMainThreadSpan()`.
 		if tr2.process.mainThread.timers != nil {
@@ -272,7 +272,7 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
 		}
 	}
 
-	if tr2.dl == FSDetailLevelProcess || tr2.dl == FSDetailLevelVerbose {
+	if tr2.dl == DetailLevelProcess || tr2.dl == DetailLevelVerbose {
 		if tr2.process.timers != nil {
 			jargs, _ := json.Marshal(tr2.process.timers)
 			sm.PutStr(string(Trace2ProcessTimers), string(jargs))

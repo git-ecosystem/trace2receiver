@@ -14,21 +14,21 @@ import (
 // look for in the Trace2 event stream to help us decide how to
 // filter data for a particular command.
 type FilterSettings struct {
-	NamespaceKeys FSKeyNames    `mapstructure:"keynames"`
-	NicknameMap   FSNicknameMap `mapstructure:"nicknames"`
-	RulesetMap    FSRulesetMap  `mapstructure:"rulesets"`
-	Defaults      FSDefaults    `mapstructure:"defaults"`
+	Keynames  FilterKeynames  `mapstructure:"keynames"`
+	Nicknames FilterNicknames `mapstructure:"nicknames"`
+	Rulesets  FilterRulesets  `mapstructure:"rulesets"`
+	Defaults  FilterDefaults  `mapstructure:"defaults"`
 
 	// The set of custom rulesets defined in YML are each parsed
 	// and loaded into definitions so that we can use them.
-	rulesetDefs map[string]*RSDefinition
+	rulesetDefs map[string]*RulesetDefinition
 }
 
-// FSKeyNames defines the names of the Git config settings that
+// FilterKeynames defines the names of the Git config settings that
 // will be used in `def_param` events to send repository/worktree
 // data to us.  This lets a site have their own namespace for
 // these keys.  Some of these keys will also be sent to the cloud.
-type FSKeyNames struct {
+type FilterKeynames struct {
 
 	// NicknameKey defines the Git config setting that can be used
 	// to send an optional user-friendly id or nickname for a repo
@@ -51,8 +51,8 @@ type FSKeyNames struct {
 	RulesetKey string `mapstructure:"ruleset_key"`
 }
 
-// FSDefaults defines default filtering values.
-type FSDefaults struct {
+// FilterDefaults defines default filtering values.
+type FilterDefaults struct {
 
 	// Ruleset defines the default ruleset or detail level to be
 	// used when we receive data from a repo/worktree that does
@@ -62,17 +62,17 @@ type FSDefaults struct {
 	RulesetName string `mapstructure:"ruleset"`
 }
 
-// FSNicknameMap is used to map a repo nickname to the name of the
+// FilterNicknames is used to map a repo nickname to the name of the
 // ruleset or detail-level that should be used.
 //
 // This table is optional.
-type FSNicknameMap map[string]string
+type FilterNicknames map[string]string
 
-// FSRulesetMap is used to map a custom ruleset name to the pathname
+// FilterRulesets is used to map a custom ruleset name to the pathname
 // of the associated YML file.  This form is used when parsing the
 // filter settings YML file.  We use this to create the real ruleset
 // table (possibly with lazy loading).
-type FSRulesetMap map[string]string
+type FilterRulesets map[string]string
 
 // Parse `filter.yml` in decode.
 func parseFilterSettings(path string) (*FilterSettings, error) {
@@ -105,8 +105,8 @@ func parseFilterSettingsFromBuffer(data []byte, path string) (*FilterSettings, e
 	// For each custom ruleset [<name> -> <path>] in the table (the map[string]string),
 	// create a peer entry in the internal [<name> -> <rsdef>] table and preload
 	// the various `ruleset.yml` files.
-	fs.rulesetDefs = make(map[string]*RSDefinition)
-	for k_rs_name, v_rs_path := range fs.RulesetMap {
+	fs.rulesetDefs = make(map[string]*RulesetDefinition)
+	for k_rs_name, v_rs_path := range fs.Rulesets {
 		if !strings.HasPrefix(k_rs_name, "rs:") || len(k_rs_name) < 4 || len(v_rs_path) == 0 {
 			return nil, fmt.Errorf("ruleset has invalid name or pathname'%s':'%s'",
 				k_rs_name, v_rs_path)
@@ -122,14 +122,14 @@ func parseFilterSettingsFromBuffer(data []byte, path string) (*FilterSettings, e
 }
 
 // Add a ruleset to the filter settings.  This is primarily for writing test code.
-func (fs *FilterSettings) addRuleset(rs_name string, path string, rsdef *RSDefinition) {
-	if fs.RulesetMap == nil {
-		fs.RulesetMap = make(FSRulesetMap)
+func (fs *FilterSettings) addRuleset(rs_name string, path string, rsdef *RulesetDefinition) {
+	if fs.Rulesets == nil {
+		fs.Rulesets = make(FilterRulesets)
 	}
-	fs.RulesetMap[rs_name] = path
+	fs.Rulesets[rs_name] = path
 
 	if fs.rulesetDefs == nil {
-		fs.rulesetDefs = make(map[string]*RSDefinition)
+		fs.rulesetDefs = make(map[string]*RulesetDefinition)
 	}
 	fs.rulesetDefs[rs_name] = rsdef
 }

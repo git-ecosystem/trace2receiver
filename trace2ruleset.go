@@ -15,12 +15,11 @@ func debugDescribe(base string, lval string, rval string) string {
 func (fs *FilterSettings) lookupRulesetNameByRulesetKey(params map[string]string, debug_in string) (rs_dl_name string, ok bool, debug_out string) {
 	debug_out = debug_in
 
-	rskey := fs.NamespaceKeys.RulesetKey
-	if len(rskey) == 0 {
+	if len(fs.Keynames.RulesetKey) == 0 {
 		return "", false, debug_out
 	}
 
-	rs_dl_name, ok = params[rskey]
+	rs_dl_name, ok = params[fs.Keynames.RulesetKey]
 	if !ok || len(rs_dl_name) == 0 {
 		return "", false, debug_out
 	}
@@ -37,12 +36,11 @@ func (fs *FilterSettings) lookupRulesetNameByRulesetKey(params map[string]string
 func (fs *FilterSettings) lookupRulesetNameByNickname(params map[string]string, debug_in string) (rs_dl_name string, ok bool, debug_out string) {
 	debug_out = debug_in
 
-	nnkey := fs.NamespaceKeys.NicknameKey
-	if len(nnkey) == 0 {
+	if len(fs.Keynames.NicknameKey) == 0 {
 		return "", false, debug_out
 	}
 
-	nnvalue, ok := params[nnkey]
+	nnvalue, ok := params[fs.Keynames.NicknameKey]
 	if !ok || len(nnvalue) == 0 {
 		return "", false, debug_out
 	}
@@ -50,7 +48,7 @@ func (fs *FilterSettings) lookupRulesetNameByNickname(params map[string]string, 
 	// Acknowledge that we saw the nickname in the request.
 	debug_out = debugDescribe(debug_out, "nickname", nnvalue)
 
-	rs_dl_name, ok = fs.NicknameMap[nnvalue]
+	rs_dl_name, ok = fs.Nicknames[nnvalue]
 	if !ok || len(rs_dl_name) == 0 {
 		// Acknowledge that the nickname was not valid.
 		debug_out := debugDescribe(debug_out, nnvalue, "UNKNOWN")
@@ -100,16 +98,16 @@ func (fs *FilterSettings) lookupRulesetName(params map[string]string, debug_in s
 }
 
 // Use the global builtin default detail level.
-func useBuiltinDefaultDetailLevel(debug_in string) (dl FSDetailLevel, debug_out string) {
-	dl, _ = getDetailLevel(FSDetailLevelDefaultName)
+func useBuiltinDefaultDetailLevel(debug_in string) (dl FilterDetailLevel, debug_out string) {
+	dl, _ = getDetailLevel(DetailLevelDefaultName)
 	// Acknowledge that we will use the builtin default.
-	debug_out = debugDescribe(debug_in, "builtin-default", FSDetailLevelDefaultName)
+	debug_out = debugDescribe(debug_in, "builtin-default", DetailLevelDefaultName)
 	return dl, debug_out
 }
 
 // Use the ruleset default detail level.  (This was set to the global
 // builtin default detail level if it wasn't set in the ruleset YML.)
-func (rsdef *RSDefinition) useRulesetDefaultDetailLevel(debug_in string) (dl FSDetailLevel, debug_out string) {
+func (rsdef *RulesetDefinition) useRulesetDefaultDetailLevel(debug_in string) (dl FilterDetailLevel, debug_out string) {
 	dl, _ = getDetailLevel(rsdef.Defaults.DetailLevelName)
 	// Acknowledge that we will use the ruleset default for this command.
 	debug_out = debugDescribe(debug_in, "ruleset-default", rsdef.Defaults.DetailLevelName)
@@ -122,19 +120,19 @@ func (rsdef *RSDefinition) useRulesetDefaultDetailLevel(debug_in string) (dl FSD
 // a match.  Then fallback to the ruleset default.  We assume that the CmdMap
 // only has detail level values (and not links to other custom rulesets), so
 // we won't get lookup cycles.
-func (rsdef *RSDefinition) lookupCommandDetailLevelName(qn QualifiedNames, debug_in string) (string, bool, string) {
+func (rsdef *RulesetDefinition) lookupCommandDetailLevelName(qn QualifiedNames, debug_in string) (string, bool, string) {
 	// See if there is an entry in the CmdMap for this Git command.
-	dl_name, ok := rsdef.CmdMap[qn.qualifiedExeVerbModeName]
+	dl_name, ok := rsdef.Commands[qn.qualifiedExeVerbModeName]
 	if ok {
 		return dl_name, true, debugDescribe(debug_in, qn.qualifiedExeVerbModeName, dl_name)
 	}
 
-	dl_name, ok = rsdef.CmdMap[qn.qualifiedExeVerbName]
+	dl_name, ok = rsdef.Commands[qn.qualifiedExeVerbName]
 	if ok {
 		return dl_name, true, debugDescribe(debug_in, qn.qualifiedExeVerbName, dl_name)
 	}
 
-	dl_name, ok = rsdef.CmdMap[qn.qualifiedExeBaseName]
+	dl_name, ok = rsdef.Commands[qn.qualifiedExeBaseName]
 	if ok {
 		return dl_name, true, debugDescribe(debug_in, qn.qualifiedExeBaseName, dl_name)
 	}
@@ -144,7 +142,7 @@ func (rsdef *RSDefinition) lookupCommandDetailLevelName(qn QualifiedNames, debug
 
 // Compute the net-net detail level that we should use for this Git command.
 func computeDetailLevel(fs *FilterSettings, params map[string]string,
-	qn QualifiedNames) (FSDetailLevel, string) {
+	qn QualifiedNames) (FilterDetailLevel, string) {
 
 	if fs == nil {
 		// No filter-spec, assume global builtin default detail level.
@@ -194,8 +192,8 @@ func computeDetailLevel(fs *FilterSettings, params map[string]string,
 	// We should not get here because we validated the spelling of all
 	// of the CmdMap values and the default value when we validated the
 	// `config.yml`.  But force a sane backstop.
-	dl, _ = getDetailLevel(FSDetailLevelDefaultName)
-	debug = debugDescribe(debug, "BACKSTOP", FSDetailLevelDefaultName)
+	dl, _ = getDetailLevel(DetailLevelDefaultName)
+	debug = debugDescribe(debug, "BACKSTOP", DetailLevelDefaultName)
 
 	return dl, debug
 }

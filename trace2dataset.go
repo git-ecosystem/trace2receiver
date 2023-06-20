@@ -72,7 +72,7 @@ type trace2Dataset struct {
 
 	// The filter ruleset or detail level computed for data from this
 	// Git command.
-	dl FSDetailLevel
+	dl FilterDetailLevel
 
 	// Remember the debug diags for how we computed the detail level.
 	dl_debug string
@@ -265,7 +265,7 @@ func NewTrace2Dataset(rcvr_base *Rcvr_Base) *trace2Dataset {
 	tr2.process.paramSetPriorities = make(map[string]int)
 
 	tr2.pii = make(map[string]string)
-	tr2.dl = FSDetailLevelUnset
+	tr2.dl = DetailLevelUnset
 
 	return tr2
 }
@@ -513,7 +513,7 @@ func (tr2 *trace2Dataset) exportTraces() {
 
 	tr2.rcvr_base.Logger.Debug(tr2.dl_debug)
 
-	if tr2.dl == FSDetailLevelDrop {
+	if tr2.dl == DetailLevelDrop {
 		return
 	}
 

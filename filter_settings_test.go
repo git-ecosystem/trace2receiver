@@ -32,7 +32,7 @@ func Test_Empty_FilterSettings(t *testing.T) {
 
 	dl, dl_debug := computeDetailLevel(fs, params, x_qn)
 
-	assert.Equal(t, FSDetailLevelSummary, dl) // the inherited global default
+	assert.Equal(t, DetailLevelSummary, dl) // the inherited global default
 	assert.Equal(t, "[builtin-default -> dl:summary]", dl_debug)
 }
 
@@ -52,7 +52,7 @@ func Test_Default_FilterSettings(t *testing.T) {
 
 	dl, dl_debug := computeDetailLevel(fs, params, x_qn)
 
-	assert.Equal(t, FSDetailLevelVerbose, dl)
+	assert.Equal(t, DetailLevelVerbose, dl)
 	assert.Equal(t, "[default-ruleset -> dl:verbose]", dl_debug)
 }
 
@@ -84,7 +84,7 @@ func Test_RSDef0_FilterSettings(t *testing.T) {
 
 	dl, dl_debug := computeDetailLevel(fs, params, x_qn)
 
-	assert.Equal(t, FSDetailLevelProcess, dl)
+	assert.Equal(t, DetailLevelProcess, dl)
 	assert.Equal(t, "[default-ruleset -> rs:rsdef0]/[command -> c:v#m]/[ruleset-default -> dl:process]", dl_debug)
 }
 
@@ -129,21 +129,21 @@ func Test_RulesetKey_FilterSettings(t *testing.T) {
 
 	dl, dl_debug := computeDetailLevel(fs, params, x_qn)
 
-	assert.Equal(t, dl, FSDetailLevelProcess)
+	assert.Equal(t, dl, DetailLevelProcess)
 	assert.Equal(t, dl_debug, "[default-ruleset -> rs:rsdef0]/[command -> c:v#m]/[ruleset-default -> dl:process]")
 
 	params[x_rkey] = x_rs_rsdef1_name // set the Git config key
 
 	dl, dl_debug = computeDetailLevel(fs, params, x_qn)
 
-	assert.Equal(t, FSDetailLevelSummary, dl)
+	assert.Equal(t, DetailLevelSummary, dl)
 	assert.Equal(t, "[rskey -> rs:rsdef1]/[command -> c:v#m]/[ruleset-default -> dl:summary]", dl_debug)
 
 	params[x_rkey] += "-bogus" // set the Git config key to an unknown ruleset
 
 	dl, dl_debug = computeDetailLevel(fs, params, x_qn)
 
-	assert.Equal(t, FSDetailLevelSummary, dl)
+	assert.Equal(t, DetailLevelSummary, dl)
 	assert.Equal(t, "[rskey -> rs:rsdef1-bogus]/[rs:rsdef1-bogus -> INVALID]/[builtin-default -> dl:summary]", dl_debug)
 }
 
@@ -183,21 +183,21 @@ func Test_NicknameKey_FilterSettings(t *testing.T) {
 
 	dl, dl_debug := computeDetailLevel(fs, params, x_qn)
 
-	assert.Equal(t, dl, FSDetailLevelProcess)
+	assert.Equal(t, dl, DetailLevelProcess)
 	assert.Equal(t, dl_debug, "[default-ruleset -> rs:rsdef0]/[command -> c:v#m]/[ruleset-default -> dl:process]")
 
 	params[x_nnkey] = x_nn // set the Git config key
 
 	dl, dl_debug = computeDetailLevel(fs, params, x_qn)
 
-	assert.Equal(t, FSDetailLevelSummary, dl)
+	assert.Equal(t, DetailLevelSummary, dl)
 	assert.Equal(t, "[nickname -> monorepo]/[monorepo -> rs:rsdef1]/[command -> c:v#m]/[ruleset-default -> dl:summary]", dl_debug)
 
 	params[x_nnkey] += "-bogus" // set the Git config key to an unknown nickname
 
 	dl, dl_debug = computeDetailLevel(fs, params, x_qn)
 
-	assert.Equal(t, FSDetailLevelProcess, dl)
+	assert.Equal(t, DetailLevelProcess, dl)
 	assert.Equal(t, "[nickname -> monorepo-bogus]/[monorepo-bogus -> UNKNOWN]/[default-ruleset -> rs:rsdef0]/[command -> c:v#m]/[ruleset-default -> dl:process]", dl_debug)
 }
 
@@ -241,14 +241,14 @@ func Test_RSCmd0_FilterSettings(t *testing.T) {
 
 	dl, dl_debug := computeDetailLevel(fs, params, qn1)
 
-	assert.Equal(t, FSDetailLevelDrop, dl)
+	assert.Equal(t, DetailLevelDrop, dl)
 	assert.Equal(t, "[default-ruleset -> rs:rscmd0]/[command -> c:v#m]/[c:v#m -> dl:drop]", dl_debug)
 
 	qn1.qualifiedExeVerbModeName = "c:v#ZZ" // change the mode to get verb fallback
 
 	dl, dl_debug = computeDetailLevel(fs, params, qn1)
 
-	assert.Equal(t, FSDetailLevelSummary, dl)
+	assert.Equal(t, DetailLevelSummary, dl)
 	assert.Equal(t, "[default-ruleset -> rs:rscmd0]/[command -> c:v#ZZ]/[c:v -> dl:summary]", dl_debug)
 
 	qn1.qualifiedExeVerbName = "c:YY" // change the verb to get exe fallback
@@ -256,7 +256,7 @@ func Test_RSCmd0_FilterSettings(t *testing.T) {
 
 	dl, dl_debug = computeDetailLevel(fs, params, qn1)
 
-	assert.Equal(t, FSDetailLevelProcess, dl)
+	assert.Equal(t, DetailLevelProcess, dl)
 	assert.Equal(t, "[default-ruleset -> rs:rscmd0]/[command -> c:YY#ZZ]/[c -> dl:process]", dl_debug)
 
 	qn1.qualifiedExeBaseName = "XX" // change the exe to get ruleset default fallback
@@ -265,7 +265,7 @@ func Test_RSCmd0_FilterSettings(t *testing.T) {
 
 	dl, dl_debug = computeDetailLevel(fs, params, qn1)
 
-	assert.Equal(t, FSDetailLevelVerbose, dl)
+	assert.Equal(t, DetailLevelVerbose, dl)
 	assert.Equal(t, "[default-ruleset -> rs:rscmd0]/[command -> XX:YY#ZZ]/[ruleset-default -> dl:verbose]", dl_debug)
 }
 
@@ -294,7 +294,7 @@ func Test_Nil_Nil_FilterSettings(t *testing.T) {
 
 	dl, dl_debug := computeDetailLevel(nil, nil, x_qn)
 
-	assert.Equal(t, FSDetailLevelSummary, dl)
+	assert.Equal(t, DetailLevelSummary, dl)
 	assert.Equal(t, "[builtin-default -> dl:summary]", dl_debug)
 }
 
@@ -304,7 +304,7 @@ func Test_FSEmpty_Nil_FilterSettings(t *testing.T) {
 
 	dl, dl_debug := computeDetailLevel(fs, nil, x_qn)
 
-	assert.Equal(t, FSDetailLevelSummary, dl)
+	assert.Equal(t, DetailLevelSummary, dl)
 	assert.Equal(t, "[builtin-default -> dl:summary]", dl_debug)
 }
 
@@ -316,6 +316,6 @@ func Test_FSNNKey_Nil_FilterSettings(t *testing.T) {
 
 	dl, dl_debug := computeDetailLevel(fs, nil, x_qn)
 
-	assert.Equal(t, FSDetailLevelProcess, dl)
+	assert.Equal(t, DetailLevelProcess, dl)
 	assert.Equal(t, "[default-ruleset -> rs:rsdef0]/[command -> c:v#m]/[ruleset-default -> dl:process]", dl_debug)
 }
