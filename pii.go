@@ -29,8 +29,12 @@ func parsePII(path string) (*PiiSettings, error) {
 			path, err.Error())
 	}
 
+	return parsePIIFromBuffer(data, path)
+}
+
+func parsePIIFromBuffer(data []byte, path string) (*PiiSettings, error) {
 	m := make(map[interface{}]interface{})
-	err = yaml.Unmarshal(data, &m)
+	err := yaml.Unmarshal(data, &m)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse PII YAML '%s': '%s'",
 			path, err.Error())
