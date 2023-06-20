@@ -78,11 +78,68 @@ func (fs *FilterSettings) lookupDefaultRulesetName(debug_in string) (rs_dl_name 
 	return fs.Defaults.RulesetName, true, debug_out
 }
 
+// Determine whether a ruleset or detail level was requested.
+func (fs *FilterSettings) lookupRulesetName(params map[string]string, debug_in string) (rs_dl_name string, ok bool, debug_out string) {
+	debug_out = debug_in
+
+	// If the command sent a `def_param` with the "Ruleset Key" that
+	// is known, use it.
+	rs_dl_name, ok, debug_out = fs.lookupRulesetNameByRulesetKey(params, debug_out)
+	if !ok {
+		// Otherwise, if the command sent a `def_param` with the "Nickname Key"
+		// that has a known mapping, use it.
+		rs_dl_name, ok, debug_out = fs.lookupRulesetNameByNickname(params, debug_out)
+		if !ok {
+			// Otherwise, if the filter settings defined a global default
+			// ruleset, use it.
+			rs_dl_name, ok, debug_out = fs.lookupDefaultRulesetName(debug_out)
+		}
+	}
+
+	return rs_dl_name, ok, debug_out
+}
+
+// Use the global builtin default detail level.
 func useBuiltinDefaultDetailLevel(debug_in string) (dl FSDetailLevel, debug_out string) {
-	dl = FSDetailLevelDefault
+	dl, _ = getDetailLevel(FSDetailLevelDefaultName)
 	// Acknowledge that we will use the builtin default.
 	debug_out = debugDescribe(debug_in, "builtin-default", FSDetailLevelDefaultName)
 	return dl, debug_out
+}
+
+// Use the ruleset default detail level.  (This was set to the global
+// builtin default detail level if it wasn't set in the ruleset YML.)
+func (rsdef *RSDefinition) useRulesetDefaultDetailLevel(debug_in string) (dl FSDetailLevel, debug_out string) {
+	dl, _ = getDetailLevel(rsdef.Defaults.DetailLevelName)
+	// Acknowledge that we will use the ruleset default for this command.
+	debug_out = debugDescribe(debug_in, "ruleset-default", rsdef.Defaults.DetailLevelName)
+	return dl, debug_out
+}
+
+// Lookup the detail level for a command using the CmdMap in this ruleset.
+//
+// We try: `<exe>:<verb>#<mode>`, `<exe>:<verb>`, and `<exe>` until we find
+// a match.  Then fallback to the ruleset default.  We assume that the CmdMap
+// only has detail level values (and not links to other custom rulesets), so
+// we won't get lookup cycles.
+func (rsdef *RSDefinition) lookupCommandDetailLevelName(qn QualifiedNames, debug_in string) (string, bool, string) {
+	// See if there is an entry in the CmdMap for this Git command.
+	dl_name, ok := rsdef.CmdMap[qn.qualifiedExeVerbModeName]
+	if ok {
+		return dl_name, true, debugDescribe(debug_in, qn.qualifiedExeVerbModeName, dl_name)
+	}
+
+	dl_name, ok = rsdef.CmdMap[qn.qualifiedExeVerbName]
+	if ok {
+		return dl_name, true, debugDescribe(debug_in, qn.qualifiedExeVerbName, dl_name)
+	}
+
+	dl_name, ok = rsdef.CmdMap[qn.qualifiedExeBaseName]
+	if ok {
+		return dl_name, true, debugDescribe(debug_in, qn.qualifiedExeBaseName, dl_name)
+	}
+
+	return "", false, debug_in
 }
 
 // Compute the net-net detail level that we should use for this Git command.
@@ -94,76 +151,43 @@ func computeDetailLevel(fs *FilterSettings, params map[string]string,
 		return useBuiltinDefaultDetailLevel("")
 	}
 
-	var debug string
-
-	// If the command sent a `def_param` with the "Ruleset Key" that
-	// is known, use it.
-	rsdl_value, ok, debug := fs.lookupRulesetNameByRulesetKey(params, debug)
+	rs_dl_name, ok, debug := fs.lookupRulesetName(params, "")
 	if !ok {
-		// Otherwise, if the command sent a `def_param` with the "Nickname Key"
-		// that has mapping, use it.
-		rsdl_value, ok, debug = fs.lookupRulesetNameByNickname(params, debug)
-		if !ok {
-			// Otherwise, if the filter settings defined a global default
-			// ruleset, use it.
-			rsdl_value, ok, debug = fs.lookupDefaultRulesetName(debug)
-			if !ok {
-				// Otherwise, apply the builtin default detail level.
-				return useBuiltinDefaultDetailLevel(debug)
-			}
-		}
+		// No ruleset or detail level, assume global builtin default detail level.
+		return useBuiltinDefaultDetailLevel(debug)
 	}
 
-	// If the overall value was a valid detail level rather than a
-	// named ruleset, then we use it as is (since we don't do
-	// per-command filtering for them).
-	dl, ok := getDetailLevel(rsdl_value)
-	if ok {
+	// If the name is a detail level rather than a named ruleset, then we use it
+	// as is (since we don't do per-command filtering for detail levels).
+	dl, err := getDetailLevel(rs_dl_name)
+	if err == nil {
 		return dl, debug
 	}
 
 	// Try to look it up as a custom ruleset.
-	rsdef, ok := fs.rulesetDefs[rsdl_value]
+	rsdef, ok := fs.rulesetDefs[rs_dl_name]
 	if !ok {
-		debug = debugDescribe(debug, rsdl_value, "INVALID")
+		// Acknowledge that the ruleset name is not valid/unknown.
+		debug = debugDescribe(debug, rs_dl_name, "INVALID")
 
 		// We do not have a ruleset with that name.  Silently assume the builtin
 		// default detail level.
 		return useBuiltinDefaultDetailLevel(debug)
 	}
 
-	// Use the requested ruleset.
-
+	// Acknowledge that we are trying command-level filtering starting with
+	// the full expression.
 	debug = debugDescribe(debug, "command", qn.qualifiedExeVerbModeName)
 
-	// See if there is an entry in the CmdMap for this Git command.
-	//
-	// We try: `<exe>:<verb>#<mode>`, `<exe>:<verb>`, and `<exe>` until we find
-	// a match.  Then fallback to the ruleset default.  We assume that the CmdMap
-	// only has detail level values (and not links to other custom rulesets), so
-	// we won't get lookup cycles.
-	dl_name, ok := rsdef.CmdMap[qn.qualifiedExeVerbModeName]
-	if ok {
-		debug = debugDescribe(debug, qn.qualifiedExeVerbModeName, dl_name)
-	} else {
-		dl_name, ok = rsdef.CmdMap[qn.qualifiedExeVerbName]
-		if ok {
-			debug = debugDescribe(debug, qn.qualifiedExeVerbName, dl_name)
-		} else {
-			dl_name, ok = rsdef.CmdMap[qn.qualifiedExeBaseName]
-			if ok {
-				debug = debugDescribe(debug, qn.qualifiedExeBaseName, dl_name)
-			} else {
-				// Use the ruleset default detail level.  (This was set to the global
-				// default detail level if it wasn't set in the ruleset YML.)
-				dl_name = rsdef.Defaults.DetailLevelName
-				debug = debugDescribe(debug, "ruleset-default", dl_name)
-			}
-		}
+	// Use the requested ruleset and see if this command has a
+	// command-specific filtering.
+	dl_name, ok, debug := rsdef.lookupCommandDetailLevelName(qn, debug)
+	if !ok {
+		return rsdef.useRulesetDefaultDetailLevel(debug)
 	}
 
-	dl, ok = getDetailLevel(dl_name)
-	if ok {
+	dl, err = getDetailLevel(dl_name)
+	if err == nil {
 		return dl, debug
 	}
 

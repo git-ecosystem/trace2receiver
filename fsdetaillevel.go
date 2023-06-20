@@ -1,5 +1,10 @@
 package trace2receiver
 
+import (
+	"errors"
+	"fmt"
+)
+
 // Filter Settings Detail Level describes the amount of detail
 // in the output OTLP that we will generate for a Git command.
 type FSDetailLevel int
@@ -20,38 +25,21 @@ const (
 	FSDetailLevelProcessName string = "dl:process"
 	FSDetailLevelVerboseName string = "dl:verbose"
 
-	FSDetailLevelDefaultName string        = FSDetailLevelSummaryName
-	FSDetailLevelDefault     FSDetailLevel = FSDetailLevelSummary
+	FSDetailLevelDefaultName string = FSDetailLevelSummaryName
 )
 
 // Convert a detail level name or ruleset name into a detail level id.
-func getDetailLevel(rs string) (FSDetailLevel, bool) {
-	switch rs {
+func getDetailLevel(dl_name string) (FSDetailLevel, error) {
+	switch dl_name {
 	case FSDetailLevelDropName:
-		return FSDetailLevelDrop, true
+		return FSDetailLevelDrop, nil
 	case FSDetailLevelSummaryName:
-		return FSDetailLevelSummary, true
+		return FSDetailLevelSummary, nil
 	case FSDetailLevelProcessName:
-		return FSDetailLevelProcess, true
+		return FSDetailLevelProcess, nil
 	case FSDetailLevelVerboseName:
-		return FSDetailLevelVerbose, true
+		return FSDetailLevelVerbose, nil
 	default:
-		return FSDetailLevelUnset, false
-	}
-}
-
-// Convert a detail level id back into a detail level name.
-func getDetailLevelName(dl FSDetailLevel) (string, bool) {
-	switch dl {
-	case FSDetailLevelDrop:
-		return FSDetailLevelDropName, true
-	case FSDetailLevelSummary:
-		return FSDetailLevelSummaryName, true
-	case FSDetailLevelProcess:
-		return FSDetailLevelProcessName, true
-	case FSDetailLevelVerbose:
-		return FSDetailLevelVerboseName, true
-	default:
-		return "", false
+		return FSDetailLevelUnset, errors.New(fmt.Sprintf("invalid detail level '%s'", dl_name))
 	}
 }
