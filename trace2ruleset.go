@@ -12,66 +12,77 @@ func debugDescribe(base string, lval string, rval string) string {
 
 // Try to lookup the name of the custom ruleset or detail level using
 // value passed in the `def_param` for the `Ruleset Key`.
-func lookupFilterByRulesetKey(fs *FilterSettings, params map[string]string, debug string) (string, bool, string) {
+func (fs *FilterSettings) lookupRulesetNameByRulesetKey(params map[string]string, debug_in string) (rs_dl_name string, ok bool, debug_out string) {
+	debug_out = debug_in
+
 	rskey := fs.NamespaceKeys.RulesetKey
 	if len(rskey) == 0 {
-		return "", false, debug
+		return "", false, debug_out
 	}
 
-	rsdl_value, ok := params[rskey]
-	if !ok || len(rsdl_value) == 0 {
-		return "", false, debug
+	rs_dl_name, ok = params[rskey]
+	if !ok || len(rs_dl_name) == 0 {
+		return "", false, debug_out
 	}
 
-	debug = debugDescribe(debug, "rskey", rsdl_value)
+	// Acknowledge that we saw the ruleset key in the request and will try to use it.
+	debug_out = debugDescribe(debug_out, "rskey", rs_dl_name)
 
-	return rsdl_value, true, debug
+	return rs_dl_name, true, debug_out
 }
 
 // Lookup ruleset or detail level name based upon the nickname (if the
 // key is defined in the filter settings and if the worktree sent
 // a def_param for it).
-func lookupFilterByNickname(fs *FilterSettings, params map[string]string, debug string) (string, bool, string) {
+func (fs *FilterSettings) lookupRulesetNameByNickname(params map[string]string, debug_in string) (rs_dl_name string, ok bool, debug_out string) {
+	debug_out = debug_in
+
 	nnkey := fs.NamespaceKeys.NicknameKey
 	if len(nnkey) == 0 {
-		return "", false, debug
+		return "", false, debug_out
 	}
 
 	nnvalue, ok := params[nnkey]
 	if !ok || len(nnvalue) == 0 {
-		return "", false, debug
+		return "", false, debug_out
 	}
 
-	debug = debugDescribe(debug, "nickname", nnvalue)
+	// Acknowledge that we saw the nickname in the request.
+	debug_out = debugDescribe(debug_out, "nickname", nnvalue)
 
-	rsdl_value, ok := fs.NicknameMap[nnvalue]
-	if !ok || len(rsdl_value) == 0 {
-		debug := debugDescribe(debug, nnvalue, "UNKNOWN")
-		return "", false, debug
+	rs_dl_name, ok = fs.NicknameMap[nnvalue]
+	if !ok || len(rs_dl_name) == 0 {
+		// Acknowledge that the nickname was not valid.
+		debug_out := debugDescribe(debug_out, nnvalue, "UNKNOWN")
+		return "", false, debug_out
 	}
 
-	debug = debugDescribe(debug, nnvalue, rsdl_value)
+	// Acknowledge that we will try to use the nickname.
+	debug_out = debugDescribe(debug_out, nnvalue, rs_dl_name)
 
-	return rsdl_value, true, debug
+	return rs_dl_name, true, debug_out
 }
 
-// Lookup the default ruleset or detail level from the global defaults
-// section in the filter settings.
-func lookupFilterDefaultRulesetName(fs *FilterSettings, debug string) (string, bool, string) {
-	rsdl := fs.Defaults.RulesetName
-	if len(rsdl) == 0 {
-		return "", false, debug
+// Lookup the name of the default ruleset or detail level from
+// the global defaults section in the filter settings if it has one.
+func (fs *FilterSettings) lookupDefaultRulesetName(debug_in string) (rs_dl_name string, ok bool, debug_out string) {
+	debug_out = debug_in
+
+	if len(fs.Defaults.RulesetName) == 0 {
+		return "", false, debug_out
 	}
 
-	debug = debugDescribe(debug, "default-ruleset", rsdl)
+	// Acknowledge that we will try to use the global default.
+	debug_out = debugDescribe(debug_out, "default-ruleset", fs.Defaults.RulesetName)
 
-	return rsdl, true, debug
+	return fs.Defaults.RulesetName, true, debug_out
 }
 
-func useBuiltinDefaultDetailLevel(debug string) (FSDetailLevel, string) {
-	dl := FSDetailLevelDefault
-	debug = debugDescribe(debug, "builtin-default", FSDetailLevelDefaultName)
-	return dl, debug
+func useBuiltinDefaultDetailLevel(debug_in string) (dl FSDetailLevel, debug_out string) {
+	dl = FSDetailLevelDefault
+	// Acknowledge that we will use the builtin default.
+	debug_out = debugDescribe(debug_in, "builtin-default", FSDetailLevelDefaultName)
+	return dl, debug_out
 }
 
 // Compute the net-net detail level that we should use for this Git command.
@@ -87,15 +98,15 @@ func computeDetailLevel(fs *FilterSettings, params map[string]string,
 
 	// If the command sent a `def_param` with the "Ruleset Key" that
 	// is known, use it.
-	rsdl_value, ok, debug := lookupFilterByRulesetKey(fs, params, debug)
+	rsdl_value, ok, debug := fs.lookupRulesetNameByRulesetKey(params, debug)
 	if !ok {
 		// Otherwise, if the command sent a `def_param` with the "Nickname Key"
 		// that has mapping, use it.
-		rsdl_value, ok, debug = lookupFilterByNickname(fs, params, debug)
+		rsdl_value, ok, debug = fs.lookupRulesetNameByNickname(params, debug)
 		if !ok {
 			// Otherwise, if the filter settings defined a global default
 			// ruleset, use it.
-			rsdl_value, ok, debug = lookupFilterDefaultRulesetName(fs, debug)
+			rsdl_value, ok, debug = fs.lookupDefaultRulesetName(debug)
 			if !ok {
 				// Otherwise, apply the builtin default detail level.
 				return useBuiltinDefaultDetailLevel(debug)
