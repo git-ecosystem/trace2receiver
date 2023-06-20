@@ -871,9 +871,9 @@ func Test_Dataset_RunDashed_Valid(t *testing.T) {
 
 	assert.Equal(t, tr2.trace2SID, x_sid)
 
-	assert.Equal(t, tr2.process.qn.qualifiedExeBaseName, "xx")
-	assert.Equal(t, tr2.process.qn.qualifiedExeVerbName, "xx:yy")
-	assert.Equal(t, tr2.process.qn.qualifiedExeVerbModeName, "xx:yy#x-mode")
+	assert.Equal(t, tr2.process.qualifiedNames.exe, "xx")
+	assert.Equal(t, tr2.process.qualifiedNames.exeVerb, "xx:yy")
+	assert.Equal(t, tr2.process.qualifiedNames.exeVerbMode, "xx:yy#x-mode")
 }
 
 func Test_Dataset_RunDashed_Invalid(t *testing.T) {
@@ -896,9 +896,9 @@ func Test_Dataset_RunDashed_Invalid(t *testing.T) {
 
 	assert.Equal(t, tr2.trace2SID, x_sid)
 
-	assert.Equal(t, tr2.process.qn.qualifiedExeBaseName, "xx")
-	assert.Equal(t, tr2.process.qn.qualifiedExeVerbName, "xx:_run_dashed_")
-	assert.Equal(t, tr2.process.qn.qualifiedExeVerbModeName, "xx:_run_dashed_#x-mode")
+	assert.Equal(t, tr2.process.qualifiedNames.exe, "xx")
+	assert.Equal(t, tr2.process.qualifiedNames.exeVerb, "xx:_run_dashed_")
+	assert.Equal(t, tr2.process.qualifiedNames.exeVerbMode, "xx:_run_dashed_#x-mode")
 }
 
 func Test_Dataset_RejectClient_FSMonitor(t *testing.T) {

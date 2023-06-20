@@ -122,19 +122,19 @@ func (rsdef *RulesetDefinition) useRulesetDefaultDetailLevel(debug_in string) (d
 // we won't get lookup cycles.
 func (rsdef *RulesetDefinition) lookupCommandDetailLevelName(qn QualifiedNames, debug_in string) (string, bool, string) {
 	// See if there is an entry in the CmdMap for this Git command.
-	dl_name, ok := rsdef.Commands[qn.qualifiedExeVerbModeName]
+	dl_name, ok := rsdef.Commands[qn.exeVerbMode]
 	if ok {
-		return dl_name, true, debugDescribe(debug_in, qn.qualifiedExeVerbModeName, dl_name)
+		return dl_name, true, debugDescribe(debug_in, qn.exeVerbMode, dl_name)
 	}
 
-	dl_name, ok = rsdef.Commands[qn.qualifiedExeVerbName]
+	dl_name, ok = rsdef.Commands[qn.exeVerb]
 	if ok {
-		return dl_name, true, debugDescribe(debug_in, qn.qualifiedExeVerbName, dl_name)
+		return dl_name, true, debugDescribe(debug_in, qn.exeVerb, dl_name)
 	}
 
-	dl_name, ok = rsdef.Commands[qn.qualifiedExeBaseName]
+	dl_name, ok = rsdef.Commands[qn.exe]
 	if ok {
-		return dl_name, true, debugDescribe(debug_in, qn.qualifiedExeBaseName, dl_name)
+		return dl_name, true, debugDescribe(debug_in, qn.exe, dl_name)
 	}
 
 	return "", false, debug_in
@@ -175,7 +175,7 @@ func computeDetailLevel(fs *FilterSettings, params map[string]string,
 
 	// Acknowledge that we are trying command-level filtering starting with
 	// the full expression.
-	debug = debugDescribe(debug, "command", qn.qualifiedExeVerbModeName)
+	debug = debugDescribe(debug, "command", qn.exeVerbMode)
 
 	// Use the requested ruleset and see if this command has a
 	// command-specific filtering.

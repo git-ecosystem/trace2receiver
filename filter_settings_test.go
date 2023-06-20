@@ -13,9 +13,9 @@ var x_fs_path string = "TEST/fs.yml"
 var x_rs_path string = "TEST/rs.yml"
 
 var x_qn = QualifiedNames{
-	qualifiedExeBaseName:     "c",
-	qualifiedExeVerbName:     "c:v",
-	qualifiedExeVerbModeName: "c:v#m",
+	exe:         "c",
+	exeVerb:     "c:v",
+	exeVerbMode: "c:v#m",
 }
 
 // //////////////////////////////////////////////////////////////
@@ -234,9 +234,9 @@ func Test_RSCmd0_FilterSettings(t *testing.T) {
 	x_TryLoadRuleset(t, fs, x_rs_rscmd0_name, x_rs_path, x_rs_rscmd0_yml)
 
 	var qn1 = QualifiedNames{
-		qualifiedExeBaseName:     "c",
-		qualifiedExeVerbName:     "c:v",
-		qualifiedExeVerbModeName: "c:v#m",
+		exe:         "c",
+		exeVerb:     "c:v",
+		exeVerbMode: "c:v#m",
 	}
 
 	dl, dl_debug := computeDetailLevel(fs, params, qn1)
@@ -244,24 +244,24 @@ func Test_RSCmd0_FilterSettings(t *testing.T) {
 	assert.Equal(t, DetailLevelDrop, dl)
 	assert.Equal(t, "[default-ruleset -> rs:rscmd0]/[command -> c:v#m]/[c:v#m -> dl:drop]", dl_debug)
 
-	qn1.qualifiedExeVerbModeName = "c:v#ZZ" // change the mode to get verb fallback
+	qn1.exeVerbMode = "c:v#ZZ" // change the mode to get verb fallback
 
 	dl, dl_debug = computeDetailLevel(fs, params, qn1)
 
 	assert.Equal(t, DetailLevelSummary, dl)
 	assert.Equal(t, "[default-ruleset -> rs:rscmd0]/[command -> c:v#ZZ]/[c:v -> dl:summary]", dl_debug)
 
-	qn1.qualifiedExeVerbName = "c:YY" // change the verb to get exe fallback
-	qn1.qualifiedExeVerbModeName = "c:YY#ZZ"
+	qn1.exeVerb = "c:YY" // change the verb to get exe fallback
+	qn1.exeVerbMode = "c:YY#ZZ"
 
 	dl, dl_debug = computeDetailLevel(fs, params, qn1)
 
 	assert.Equal(t, DetailLevelProcess, dl)
 	assert.Equal(t, "[default-ruleset -> rs:rscmd0]/[command -> c:YY#ZZ]/[c -> dl:process]", dl_debug)
 
-	qn1.qualifiedExeBaseName = "XX" // change the exe to get ruleset default fallback
-	qn1.qualifiedExeVerbName = "XX:YY"
-	qn1.qualifiedExeVerbModeName = "XX:YY#ZZ"
+	qn1.exe = "XX" // change the exe to get ruleset default fallback
+	qn1.exeVerb = "XX:YY"
+	qn1.exeVerbMode = "XX:YY#ZZ"
 
 	dl, dl_debug = computeDetailLevel(fs, params, qn1)
 

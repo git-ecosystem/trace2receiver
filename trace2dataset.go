@@ -136,13 +136,13 @@ type TrProcess struct {
 	// Process-level global counters
 	counters map[string]map[string]int64
 
-	qn QualifiedNames
+	qualifiedNames QualifiedNames
 }
 
 type QualifiedNames struct {
-	qualifiedExeBaseName     string
-	qualifiedExeVerbName     string
-	qualifiedExeVerbModeName string
+	exe         string
+	exeVerb     string
+	exeVerbMode string
 }
 
 // The `TrThread` structure captures the lifetime of a
@@ -373,7 +373,7 @@ func (tr2 *trace2Dataset) prepareDataset() bool {
 	// Update the display name of the process-level work unit to be
 	// this normalized/qualified name so that the process-level span
 	// will be more useful than just the name of the "main" thread.
-	tr2.process.mainThread.lifetime.displayName = tr2.process.qn.qualifiedExeVerbModeName
+	tr2.process.mainThread.lifetime.displayName = tr2.process.qualifiedNames.exeVerbMode
 
 	return true
 }
@@ -407,7 +407,7 @@ func (tr2 *trace2Dataset) setQualifiedExeName() {
 		}
 	}
 
-	tr2.process.qn.qualifiedExeBaseName = exeName
+	tr2.process.qualifiedNames.exe = exeName
 }
 
 // Set the "qualified exe + verb name"
@@ -421,13 +421,13 @@ func (tr2 *trace2Dataset) setQualifiedExeName() {
 //
 // Format this as "<exe>[:<verb>]" to disambiguate.
 func (tr2 *trace2Dataset) setQualifiedExeVerbName() {
-	tr2.process.qn.qualifiedExeVerbName = tr2.process.qn.qualifiedExeBaseName
+	tr2.process.qualifiedNames.exeVerb = tr2.process.qualifiedNames.exe
 
 	if len(tr2.process.cmdVerb) == 0 {
 		return
 	}
 
-	tr2.process.qn.qualifiedExeVerbName += ":"
+	tr2.process.qualifiedNames.exeVerb += ":"
 
 	switch tr2.process.cmdVerb {
 	case "_run_dashed_":
@@ -440,12 +440,12 @@ func (tr2 *trace2Dataset) setQualifiedExeVerbName() {
 		// aliases are involved (where Git will try to "dash run" the alias
 		// name, fail, and then apply alias value, and try to invoke that).
 		if len(tr2.process.cmdArgv) > 1 {
-			tr2.process.qn.qualifiedExeVerbName += tr2.process.cmdArgv[1].(string)
+			tr2.process.qualifiedNames.exeVerb += tr2.process.cmdArgv[1].(string)
 		} else {
 			// Quietly fail if argv is not long enough.  This should not happen
 			// in real life, since Git uses ["git", "remote-http"] to compose
 			// ["git-remote-https"].  We guard it here for the test suite.
-			tr2.process.qn.qualifiedExeVerbName += "_run_dashed_"
+			tr2.process.qualifiedNames.exeVerb += "_run_dashed_"
 		}
 	case "_run_git_alias_":
 		// The current Git command is trying to expand an alias and invoke
@@ -455,7 +455,7 @@ func (tr2 *trace2Dataset) setQualifiedExeVerbName() {
 		// At some point we could just omit this process from the trace, but
 		// it is a member of the SID vector, so it would leave a hole in our
 		// parent/child process graph in the trace/span.
-		tr2.process.qn.qualifiedExeVerbName += tr2.process.cmdVerb
+		tr2.process.qualifiedNames.exeVerb += tr2.process.cmdVerb
 	case "_query_":
 		// The current Git command only needs to lookup a config setting
 		// or something.  There are several commands, such as
@@ -464,17 +464,17 @@ func (tr2 *trace2Dataset) setQualifiedExeVerbName() {
 		// normal (non-dashed) verb.  (It is not safe to assume Argv[1] is the
 		// name of the specific value, for example `git -C . --exe-path`, so
 		// just keep the pseudo-verb.)
-		tr2.process.qn.qualifiedExeVerbName += tr2.process.cmdVerb
+		tr2.process.qualifiedNames.exeVerb += tr2.process.cmdVerb
 	case "_run_shell_alias_":
 		// The current Git command wants to run a non-builtin shell command.
 		// And like the other pseudo-verbs, Git will invoke it and just wait
 		// for it to exit.
-		tr2.process.qn.qualifiedExeVerbName += tr2.process.cmdVerb
+		tr2.process.qualifiedNames.exeVerb += tr2.process.cmdVerb
 	default:
 		// We have a non-pseudo verb, like `git checkout`.  (We cannot assume
 		// Argv[1] because the actual command might be something like
 		// `git -C . checkout`.)
-		tr2.process.qn.qualifiedExeVerbName += tr2.process.cmdVerb
+		tr2.process.qualifiedNames.exeVerb += tr2.process.cmdVerb
 	}
 }
 
@@ -488,13 +488,13 @@ func (tr2 *trace2Dataset) setQualifiedExeVerbName() {
 // Format this as "<exe>[:<verb>][#<mode>]" to further disambiguate it
 // from commands without modes.
 func (tr2 *trace2Dataset) setQualifiedExeVerbModeName() {
-	tr2.process.qn.qualifiedExeVerbModeName = tr2.process.qn.qualifiedExeVerbName
+	tr2.process.qualifiedNames.exeVerbMode = tr2.process.qualifiedNames.exeVerb
 
 	if len(tr2.process.cmdMode) == 0 {
 		return
 	}
 
-	tr2.process.qn.qualifiedExeVerbModeName += "#" + tr2.process.cmdMode
+	tr2.process.qualifiedNames.exeVerbMode += "#" + tr2.process.cmdMode
 }
 
 func (tr2 *trace2Dataset) exportTraces() {
@@ -509,7 +509,7 @@ func (tr2 *trace2Dataset) exportTraces() {
 	tr2.dl, tr2.dl_debug = computeDetailLevel(
 		tr2.rcvr_base.RcvrConfig.FilterSettings,
 		tr2.process.paramSetValues,
-		tr2.process.qn)
+		tr2.process.qualifiedNames)
 
 	tr2.rcvr_base.Logger.Debug(tr2.dl_debug)
 

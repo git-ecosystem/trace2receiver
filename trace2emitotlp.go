@@ -48,7 +48,7 @@ func (tr2 *trace2Dataset) insertResourceServiceFields(resourceAttrs pcommon.Map)
 	// nice property the service name is attached to every region span
 	// and that can help in some queries.
 
-	resourceAttrs.PutStr(string(semconv.ServiceNameKey), tr2.process.qn.qualifiedExeVerbModeName)
+	resourceAttrs.PutStr(string(semconv.ServiceNameKey), tr2.process.qualifiedNames.exeVerbMode)
 
 	// [3] Use the Git version number for `service.version` (and not the
 	// version number of this component).
@@ -208,9 +208,9 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
 		sm.PutStr(k, v)
 	}
 
-	sm.PutStr(string(Trace2CmdName), tr2.process.qn.qualifiedExeBaseName)
-	sm.PutStr(string(Trace2CmdNameVerb), tr2.process.qn.qualifiedExeVerbName)
-	sm.PutStr(string(Trace2CmdNameVerbMode), tr2.process.qn.qualifiedExeVerbModeName)
+	sm.PutStr(string(Trace2CmdName), tr2.process.qualifiedNames.exe)
+	sm.PutStr(string(Trace2CmdNameVerb), tr2.process.qualifiedNames.exeVerb)
+	sm.PutStr(string(Trace2CmdNameVerbMode), tr2.process.qualifiedNames.exeVerbMode)
 	sm.PutStr(string(Trace2CmdHierarchy), tr2.process.cmdHierarchy)
 	sm.PutStr(string(Trace2CmdExitCode), fmt.Sprintf("%d", tr2.process.exeExitCode))
 
