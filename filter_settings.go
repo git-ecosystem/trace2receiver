@@ -2,11 +2,7 @@ package trace2receiver
 
 import (
 	"fmt"
-	"os"
 	"strings"
-
-	"github.com/mitchellh/mapstructure"
-	"gopkg.in/yaml.v2"
 )
 
 // FilterSettings describes how we should filter the OTLP output
@@ -76,31 +72,18 @@ type FilterRulesets map[string]string
 
 // Parse `filter.yml` in decode.
 func parseFilterSettings(path string) (*FilterSettings, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("could not read filter settings '%s': '%s'",
-			path, err.Error())
-	}
-
-	return parseFilterSettingsFromBuffer(data, path)
+	return parseYmlFile[FilterSettings](path, parseFilterSettingsFromBuffer)
 }
 
 // Parse a buffer containing the contents of a `filter.yml` and decode.
-// This separation is primarily for writing test code.
 func parseFilterSettingsFromBuffer(data []byte, path string) (*FilterSettings, error) {
-	m := make(map[interface{}]interface{})
-	err := yaml.Unmarshal(data, &m)
+	fs, err := parseYmlBuffer[FilterSettings](data, path)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse filter YAML '%s': '%s'",
-			path, err.Error())
+		return nil, err
 	}
 
-	fs := new(FilterSettings)
-	err = mapstructure.Decode(m, fs)
-	if err != nil {
-		return nil, fmt.Errorf("could not decode filter settings '%s': '%s'",
-			path, err.Error())
-	}
+	// After parsing the YML and populating the `mapstructure` fields, we need
+	// to validate them and/or build internal structures from them.
 
 	// For each custom ruleset [<name> -> <path>] in the table (the map[string]string),
 	// create a peer entry in the internal [<name> -> <rsdef>] table and preload
@@ -108,11 +91,10 @@ func parseFilterSettingsFromBuffer(data []byte, path string) (*FilterSettings, e
 	fs.rulesetDefs = make(map[string]*RulesetDefinition)
 	for k_rs_name, v_rs_path := range fs.Rulesets {
 		if !strings.HasPrefix(k_rs_name, "rs:") || len(k_rs_name) < 4 || len(v_rs_path) == 0 {
-			return nil, fmt.Errorf("ruleset has invalid name or pathname'%s':'%s'",
-				k_rs_name, v_rs_path)
+			return nil, fmt.Errorf("ruleset has invalid name or pathname'%s':'%s'", k_rs_name, v_rs_path)
 		}
 
-		fs.rulesetDefs[k_rs_name], err = parseRuleset(v_rs_path)
+		fs.rulesetDefs[k_rs_name], err = parseRulesetFile(v_rs_path)
 		if err != nil {
 			return nil, err
 		}

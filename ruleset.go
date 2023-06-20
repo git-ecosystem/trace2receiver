@@ -2,10 +2,6 @@ package trace2receiver
 
 import (
 	"fmt"
-	"os"
-
-	"github.com/mitchellh/mapstructure"
-	"gopkg.in/yaml.v2"
 )
 
 // RulesetDefinition captures the content of a custom ruleset YML file.
@@ -36,32 +32,19 @@ type RulesetDefaults struct {
 }
 
 // Parse a `ruleset.yml` and decode.
-func parseRuleset(path string) (*RulesetDefinition, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("ruleset could not read '%s': '%s'",
-			path, err.Error())
-	}
-
-	return parseRulesetFromBuffer(data, path)
+func parseRulesetFile(path string) (*RulesetDefinition, error) {
+	return parseYmlFile[RulesetDefinition](path, parseRulesetFromBuffer)
 }
 
 // Parse a buffer containing the contents of a `ruleset.yml` and decode.
-// This separation is primarily for writing test code.
 func parseRulesetFromBuffer(data []byte, path string) (*RulesetDefinition, error) {
-	m := make(map[interface{}]interface{})
-	err := yaml.Unmarshal(data, &m)
+	rsdef, err := parseYmlBuffer[RulesetDefinition](data, path)
 	if err != nil {
-		return nil, fmt.Errorf("ruleset could not parse YAML '%s': '%s'",
-			path, err.Error())
+		return nil, err
 	}
 
-	rsdef := new(RulesetDefinition)
-	err = mapstructure.Decode(m, rsdef)
-	if err != nil {
-		return nil, fmt.Errorf("ruleset could not decode '%s': '%s'",
-			path, err.Error())
-	}
+	// After parsing the YML and populating the `mapstructure` fields, we
+	// need to validate them and/or build internal structures from them.
 
 	for k_cmd, v_dl := range rsdef.Commands {
 		// Commands must map to detail levels and not to another ruleset (to

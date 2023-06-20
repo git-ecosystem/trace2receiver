@@ -1,13 +1,5 @@
 package trace2receiver
 
-import (
-	"fmt"
-	"os"
-
-	"github.com/mitchellh/mapstructure"
-	"gopkg.in/yaml.v2"
-)
-
 // Settings to enable/disable possibly GDPR-sensitive fields
 // in the telemetry output.
 type PiiSettings struct {
@@ -22,30 +14,17 @@ type PiiInclude struct {
 	Username bool `mapstructure:"username"`
 }
 
-func parsePII(path string) (*PiiSettings, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("could not read PII settings '%s': '%s'",
-			path, err.Error())
-	}
-
-	return parsePIIFromBuffer(data, path)
+func parsePiiFile(path string) (*PiiSettings, error) {
+	return parseYmlFile[PiiSettings](path, parsePiiFromBuffer)
 }
 
-func parsePIIFromBuffer(data []byte, path string) (*PiiSettings, error) {
-	m := make(map[interface{}]interface{})
-	err := yaml.Unmarshal(data, &m)
+func parsePiiFromBuffer(data []byte, path string) (*PiiSettings, error) {
+	pii, err := parseYmlBuffer[PiiSettings](data, path)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse PII YAML '%s': '%s'",
-			path, err.Error())
+		return nil, err
 	}
 
-	pii := new(PiiSettings)
-	err = mapstructure.Decode(m, pii)
-	if err != nil {
-		return nil, fmt.Errorf("could not decode PII settings '%s': '%s'",
-			path, err.Error())
-	}
+	// TODO insert any post-parse validation or data structure setup here.
 
 	return pii, nil
 }

@@ -98,7 +98,7 @@ func (cfg *Config) Validate() error {
 	}
 
 	if len(cfg.PiiSettingsPath) > 0 {
-		cfg.PiiSettings, err = parsePII(cfg.PiiSettingsPath)
+		cfg.PiiSettings, err = parsePiiFile(cfg.PiiSettingsPath)
 		if err != nil {
 			return err
 		}
