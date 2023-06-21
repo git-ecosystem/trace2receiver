@@ -69,13 +69,6 @@ type trace2Dataset struct {
 	// These fields maybe GDPR-restricted, so use this at your own risk.
 	// Map from the SemConv keys to the data value.
 	pii map[string]string
-
-	// The filter ruleset or detail level computed for data from this
-	// Git command.
-	dl FilterDetailLevel
-
-	// Remember the debug diags for how we computed the detail level.
-	dl_debug string
 }
 
 // Data associated with the entire process.
@@ -265,7 +258,6 @@ func NewTrace2Dataset(rcvr_base *Rcvr_Base) *trace2Dataset {
 	tr2.process.paramSetPriorities = make(map[string]int)
 
 	tr2.pii = make(map[string]string)
-	tr2.dl = DetailLevelUnset
 
 	return tr2
 }
@@ -506,21 +498,21 @@ func (tr2 *trace2Dataset) exportTraces() {
 		return
 	}
 
-	tr2.dl, tr2.dl_debug = computeDetailLevel(
+	dl, dl_debug := computeDetailLevel(
 		tr2.rcvr_base.RcvrConfig.FilterSettings,
 		tr2.process.paramSetValues,
 		tr2.process.qualifiedNames)
 
-	tr2.rcvr_base.Logger.Debug(tr2.dl_debug)
+	tr2.rcvr_base.Logger.Debug(dl_debug)
 
-	if tr2.dl == DetailLevelDrop {
+	if dl == DetailLevelDrop {
 		return
 	}
 
-	err := tr2.rcvr_base.TracesConsumer.ConsumeTraces(tr2.rcvr_base.ctx, tr2.ToTraces())
-	if err == nil {
-		return
-	}
+	traces := tr2.ToTraces(dl)
 
-	tr2.rcvr_base.Logger.Error(err.Error())
+	err := tr2.rcvr_base.TracesConsumer.ConsumeTraces(tr2.rcvr_base.ctx, traces)
+	if err != nil {
+		tr2.rcvr_base.Logger.Error(err.Error())
+	}
 }

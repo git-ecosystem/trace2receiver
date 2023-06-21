@@ -42,3 +42,27 @@ func getDetailLevel(dl_name string) (FilterDetailLevel, error) {
 		return DetailLevelUnset, errors.New("invalid detail level")
 	}
 }
+
+func WantRegionAndThreadSpans(dl FilterDetailLevel) bool {
+	return dl == DetailLevelVerbose
+}
+
+func WantChildSpans(dl FilterDetailLevel) bool {
+	return dl == DetailLevelProcess || dl == DetailLevelVerbose
+}
+
+func WantProcessAncestry(dl FilterDetailLevel) bool {
+	return dl == DetailLevelProcess || dl == DetailLevelVerbose
+}
+
+func WantProcessAliases(dl FilterDetailLevel) bool {
+	return dl == DetailLevelProcess || dl == DetailLevelVerbose
+}
+
+func WantProcessTimersCountersAndData(dl FilterDetailLevel) bool {
+	return dl == DetailLevelProcess || dl == DetailLevelVerbose
+}
+
+func WantMainThreadTimersAndCounters(dl FilterDetailLevel) bool {
+	return WantRegionAndThreadSpans(dl)
+}

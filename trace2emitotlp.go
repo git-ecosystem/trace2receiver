@@ -89,7 +89,7 @@ func (tr2 *trace2Dataset) insertResourceInstrumentationScope(instScope pcommon.I
 	instScope.SetVersion(Trace2ReceiverVersion)
 }
 
-func (tr2 *trace2Dataset) ToTraces() ptrace.Traces {
+func (tr2 *trace2Dataset) ToTraces(dl FilterDetailLevel) ptrace.Traces {
 	pt := ptrace.NewTraces()
 
 	resourceSpans := pt.ResourceSpans().AppendEmpty()
@@ -108,9 +108,9 @@ func (tr2 *trace2Dataset) ToTraces() ptrace.Traces {
 
 	// Create an OTEL span for the entire process (aka the main thread).
 	exeSpan := scopes.Spans().AppendEmpty()
-	emitProcessSpan(&exeSpan, tr2)
+	emitProcessSpan(&exeSpan, tr2, dl)
 
-	if tr2.dl == DetailLevelVerbose {
+	if WantRegionAndThreadSpans(dl) {
 		// Create an OTEL span for the lifetime of each non-main thread.
 		for _, th := range tr2.threads {
 			thSpan := scopes.Spans().AppendEmpty()
@@ -124,7 +124,7 @@ func (tr2 *trace2Dataset) ToTraces() ptrace.Traces {
 		}
 	}
 
-	if tr2.dl == DetailLevelProcess || tr2.dl == DetailLevelVerbose {
+	if WantChildSpans(dl) {
 		// Create an OTEL span for each child process that this process created.
 		for _, child := range tr2.children {
 			childSpan := scopes.Spans().AppendEmpty()
@@ -188,7 +188,7 @@ func emitSpanEssentials(span *ptrace.Span, r *TrSpanEssentials, tr2 *trace2Datas
 	span.SetTraceID(tr2.otelTraceID)
 }
 
-func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
+func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset, dl FilterDetailLevel) {
 	emitSpanEssentials(span, &tr2.process.mainThread.lifetime, tr2)
 	span.SetKind(ptrace.SpanKindServer)
 
@@ -219,12 +219,14 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
 		sm.PutStr(string(Trace2CmdArgv), string(jargs))
 	}
 
-	if tr2.dl == DetailLevelProcess || tr2.dl == DetailLevelVerbose {
+	if WantProcessAncestry(dl) {
 		if len(tr2.process.cmdAncestry) > 0 {
 			jargs, _ := json.Marshal(tr2.process.cmdAncestry)
 			sm.PutStr(string(Trace2CmdAncestry), string(jargs))
 		}
+	}
 
+	if WantProcessAliases(dl) {
 		if len(tr2.process.cmdAliasKey) > 0 {
 			sm.PutStr(string(Trace2CmdAliasKey), tr2.process.cmdAliasKey)
 
@@ -252,14 +254,7 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
 		sm.PutStr(string(Trace2ParamSet), string(jargs))
 	}
 
-	if tr2.dl == DetailLevelProcess || tr2.dl == DetailLevelVerbose {
-		if tr2.process.dataValues != nil && len(tr2.process.dataValues) > 0 {
-			jargs, _ := json.Marshal(tr2.process.dataValues)
-			sm.PutStr(string(Trace2ProcessData), string(jargs))
-		}
-	}
-
-	if tr2.dl == DetailLevelVerbose {
+	if WantMainThreadTimersAndCounters(dl) {
 		// Emit per-thread counters and timers for the main thread because
 		// it is not handled by `emitNonMainThreadSpan()`.
 		if tr2.process.mainThread.timers != nil {
@@ -272,7 +267,11 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
 		}
 	}
 
-	if tr2.dl == DetailLevelProcess || tr2.dl == DetailLevelVerbose {
+	if WantProcessTimersCountersAndData(dl) {
+		if tr2.process.dataValues != nil && len(tr2.process.dataValues) > 0 {
+			jargs, _ := json.Marshal(tr2.process.dataValues)
+			sm.PutStr(string(Trace2ProcessData), string(jargs))
+		}
 		if tr2.process.timers != nil {
 			jargs, _ := json.Marshal(tr2.process.timers)
 			sm.PutStr(string(Trace2ProcessTimers), string(jargs))
