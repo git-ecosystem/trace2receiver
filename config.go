@@ -2,12 +2,9 @@ package trace2receiver
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
-
-	"gopkg.in/yaml.v2"
 )
 
 // `Config` represents the complete configuration settings for
@@ -49,8 +46,12 @@ type Config struct {
 	AllowCommandControlVerbs bool `mapstructure:"enable_commands"`
 
 	// Pathname to YML file containing PII settings.
-	PiiSettingsPath string `mapstructure:"pii_settings"`
+	PiiSettingsPath string `mapstructure:"pii"`
 	PiiSettings     *PiiSettings
+
+	// Pathname to YML file containing our filter settings.
+	FilterSettingsPath string `mapstructure:"filter"`
+	FilterSettings     *FilterSettings
 }
 
 // `Validate()` checks if the receiver configuration is valid.
@@ -97,16 +98,16 @@ func (cfg *Config) Validate() error {
 	}
 
 	if len(cfg.PiiSettingsPath) > 0 {
-		data, err := os.ReadFile(cfg.PiiSettingsPath)
+		cfg.PiiSettings, err = parsePiiFile(cfg.PiiSettingsPath)
 		if err != nil {
-			return fmt.Errorf("receivers.pii_settings could not read '%s': '%s'",
-				cfg.PiiSettingsPath, err.Error())
+			return err
 		}
-		cfg.PiiSettings = new(PiiSettings)
-		err = yaml.Unmarshal(data, cfg.PiiSettings)
+	}
+
+	if len(cfg.FilterSettingsPath) > 0 {
+		cfg.FilterSettings, err = parseFilterSettings(cfg.FilterSettingsPath)
 		if err != nil {
-			return fmt.Errorf("receivers.pii_settings could not parse '%s': '%s'",
-				cfg.PiiSettingsPath, err.Error())
+			return err
 		}
 	}
 

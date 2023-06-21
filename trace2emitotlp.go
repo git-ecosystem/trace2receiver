@@ -48,7 +48,7 @@ func (tr2 *trace2Dataset) insertResourceServiceFields(resourceAttrs pcommon.Map)
 	// nice property the service name is attached to every region span
 	// and that can help in some queries.
 
-	resourceAttrs.PutStr(string(semconv.ServiceNameKey), tr2.process.qualifiedExeVerbModeName)
+	resourceAttrs.PutStr(string(semconv.ServiceNameKey), tr2.process.qualifiedNames.exeVerbMode)
 
 	// [3] Use the Git version number for `service.version` (and not the
 	// version number of this component).
@@ -89,7 +89,7 @@ func (tr2 *trace2Dataset) insertResourceInstrumentationScope(instScope pcommon.I
 	instScope.SetVersion(Trace2ReceiverVersion)
 }
 
-func (tr2 *trace2Dataset) ToTraces() ptrace.Traces {
+func (tr2 *trace2Dataset) ToTraces(dl FilterDetailLevel) ptrace.Traces {
 	pt := ptrace.NewTraces()
 
 	resourceSpans := pt.ResourceSpans().AppendEmpty()
@@ -108,29 +108,33 @@ func (tr2 *trace2Dataset) ToTraces() ptrace.Traces {
 
 	// Create an OTEL span for the entire process (aka the main thread).
 	exeSpan := scopes.Spans().AppendEmpty()
-	emitProcessSpan(&exeSpan, tr2)
+	emitProcessSpan(&exeSpan, tr2, dl)
 
-	// Create an OTEL span for the lifetime of each non-main thread.
-	for _, th := range tr2.threads {
-		thSpan := scopes.Spans().AppendEmpty()
-		emitNonMainThreadSpan(&thSpan, th, tr2)
+	if WantRegionAndThreadSpans(dl) {
+		// Create an OTEL span for the lifetime of each non-main thread.
+		for _, th := range tr2.threads {
+			thSpan := scopes.Spans().AppendEmpty()
+			emitNonMainThreadSpan(&thSpan, th, tr2)
+		}
+
+		// Create OTEL spans for all completed regions (from all threads).
+		for _, r := range tr2.completedRegions {
+			rSpan := scopes.Spans().AppendEmpty()
+			emitRegionSpan(&rSpan, r, tr2)
+		}
 	}
 
-	// Create OTEL spans for all completed regions (from all threads).
-	for _, r := range tr2.completedRegions {
-		rSpan := scopes.Spans().AppendEmpty()
-		emitRegionSpan(&rSpan, r, tr2)
-	}
+	if WantChildSpans(dl) {
+		// Create an OTEL span for each child process that this process created.
+		for _, child := range tr2.children {
+			childSpan := scopes.Spans().AppendEmpty()
+			emitChildSpan(&childSpan, child, tr2)
+		}
 
-	// Create an OTEL span for each child process that this process created.
-	for _, child := range tr2.children {
-		childSpan := scopes.Spans().AppendEmpty()
-		emitChildSpan(&childSpan, child, tr2)
-	}
-
-	for _, exec := range tr2.exec {
-		execSpan := scopes.Spans().AppendEmpty()
-		emitExecSpan(&execSpan, exec, tr2)
+		for _, exec := range tr2.exec {
+			execSpan := scopes.Spans().AppendEmpty()
+			emitExecSpan(&execSpan, exec, tr2)
+		}
 	}
 
 	return pt
@@ -184,7 +188,7 @@ func emitSpanEssentials(span *ptrace.Span, r *TrSpanEssentials, tr2 *trace2Datas
 	span.SetTraceID(tr2.otelTraceID)
 }
 
-func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
+func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset, dl FilterDetailLevel) {
 	emitSpanEssentials(span, &tr2.process.mainThread.lifetime, tr2)
 	span.SetKind(ptrace.SpanKindServer)
 
@@ -204,9 +208,9 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
 		sm.PutStr(k, v)
 	}
 
-	sm.PutStr(string(Trace2CmdName), tr2.process.qualifiedExeBaseName)
-	sm.PutStr(string(Trace2CmdNameVerb), tr2.process.qualifiedExeVerbName)
-	sm.PutStr(string(Trace2CmdNameVerbMode), tr2.process.qualifiedExeVerbModeName)
+	sm.PutStr(string(Trace2CmdName), tr2.process.qualifiedNames.exe)
+	sm.PutStr(string(Trace2CmdNameVerb), tr2.process.qualifiedNames.exeVerb)
+	sm.PutStr(string(Trace2CmdNameVerbMode), tr2.process.qualifiedNames.exeVerbMode)
 	sm.PutStr(string(Trace2CmdHierarchy), tr2.process.cmdHierarchy)
 	sm.PutStr(string(Trace2CmdExitCode), fmt.Sprintf("%d", tr2.process.exeExitCode))
 
@@ -215,17 +219,21 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
 		sm.PutStr(string(Trace2CmdArgv), string(jargs))
 	}
 
-	if len(tr2.process.cmdAncestry) > 0 {
-		jargs, _ := json.Marshal(tr2.process.cmdAncestry)
-		sm.PutStr(string(Trace2CmdAncestry), string(jargs))
+	if WantProcessAncestry(dl) {
+		if len(tr2.process.cmdAncestry) > 0 {
+			jargs, _ := json.Marshal(tr2.process.cmdAncestry)
+			sm.PutStr(string(Trace2CmdAncestry), string(jargs))
+		}
 	}
 
-	if len(tr2.process.cmdAliasKey) > 0 {
-		sm.PutStr(string(Trace2CmdAliasKey), tr2.process.cmdAliasKey)
+	if WantProcessAliases(dl) {
+		if len(tr2.process.cmdAliasKey) > 0 {
+			sm.PutStr(string(Trace2CmdAliasKey), tr2.process.cmdAliasKey)
 
-		if len(tr2.process.cmdAliasValue) > 0 {
-			jargs, _ := json.Marshal(tr2.process.cmdAliasValue)
-			sm.PutStr(string(Trace2CmdAliasValue), string(jargs))
+			if len(tr2.process.cmdAliasValue) > 0 {
+				jargs, _ := json.Marshal(tr2.process.cmdAliasValue)
+				sm.PutStr(string(Trace2CmdAliasValue), string(jargs))
+			}
 		}
 	}
 
@@ -246,29 +254,32 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset) {
 		sm.PutStr(string(Trace2ParamSet), string(jargs))
 	}
 
-	if tr2.process.dataValues != nil && len(tr2.process.dataValues) > 0 {
-		jargs, _ := json.Marshal(tr2.process.dataValues)
-		sm.PutStr(string(Trace2ProcessData), string(jargs))
+	if WantMainThreadTimersAndCounters(dl) {
+		// Emit per-thread counters and timers for the main thread because
+		// it is not handled by `emitNonMainThreadSpan()`.
+		if tr2.process.mainThread.timers != nil {
+			jargs, _ := json.Marshal(tr2.process.mainThread.timers)
+			sm.PutStr(string(Trace2ThreadTimers), string(jargs))
+		}
+		if tr2.process.mainThread.counters != nil {
+			jargs, _ := json.Marshal(tr2.process.mainThread.counters)
+			sm.PutStr(string(Trace2ThreadCounters), string(jargs))
+		}
 	}
 
-	// Emit per-thread counters and timers for the main thread because
-	// it is not handled by `emitNonMainThreadSpan()`.
-	if tr2.process.mainThread.timers != nil {
-		jargs, _ := json.Marshal(tr2.process.mainThread.timers)
-		sm.PutStr(string(Trace2ThreadTimers), string(jargs))
-	}
-	if tr2.process.mainThread.counters != nil {
-		jargs, _ := json.Marshal(tr2.process.mainThread.counters)
-		sm.PutStr(string(Trace2ThreadCounters), string(jargs))
-	}
-
-	if tr2.process.timers != nil {
-		jargs, _ := json.Marshal(tr2.process.timers)
-		sm.PutStr(string(Trace2ProcessTimers), string(jargs))
-	}
-	if tr2.process.counters != nil {
-		jargs, _ := json.Marshal(tr2.process.counters)
-		sm.PutStr(string(Trace2ProcessCounters), string(jargs))
+	if WantProcessTimersCountersAndData(dl) {
+		if tr2.process.dataValues != nil && len(tr2.process.dataValues) > 0 {
+			jargs, _ := json.Marshal(tr2.process.dataValues)
+			sm.PutStr(string(Trace2ProcessData), string(jargs))
+		}
+		if tr2.process.timers != nil {
+			jargs, _ := json.Marshal(tr2.process.timers)
+			sm.PutStr(string(Trace2ProcessTimers), string(jargs))
+		}
+		if tr2.process.counters != nil {
+			jargs, _ := json.Marshal(tr2.process.counters)
+			sm.PutStr(string(Trace2ProcessCounters), string(jargs))
+		}
 	}
 }
 
