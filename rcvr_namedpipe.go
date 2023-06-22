@@ -33,18 +33,21 @@ type Rcvr_NamedPipe struct {
 func (rcvr *Rcvr_NamedPipe) Start(unused_ctx context.Context, host component.Host) error {
 	var err error
 
+	var listenQueueSize int = 5
+	var acceptPoolSize int = listenQueueSize * 2
+
 	err = rcvr.Base.Start(unused_ctx, host)
 	if err != nil {
 		return err
 	}
 
-	err = rcvr.openNamedPipeServer()
+	err = rcvr.openNamedPipeServer(listenQueueSize)
 	if err != nil {
 		host.ReportFatalError(err)
 		return err
 	}
 
-	go rcvr.listenLoop()
+	go rcvr.listenLoop(acceptPoolSize)
 	return nil
 }
 
@@ -59,7 +62,7 @@ func (rcvr *Rcvr_NamedPipe) Shutdown(context.Context) error {
 }
 
 // Open the server-side of a named pipe.
-func (rcvr *Rcvr_NamedPipe) openNamedPipeServer() (err error) {
+func (rcvr *Rcvr_NamedPipe) openNamedPipeServer(listenQueueSize int) (err error) {
 	_ = os.Remove(rcvr.NamedPipePath)
 
 	c := winio.PipeConfig{
@@ -67,6 +70,7 @@ func (rcvr *Rcvr_NamedPipe) openNamedPipeServer() (err error) {
 		MessageMode:        false,
 		InputBufferSize:    65536,
 		OutputBufferSize:   65536,
+		QueueSize:          int32(listenQueueSize),
 	}
 
 	rcvr.listener, err = winio.ListenPipe(rcvr.NamedPipePath, &c)
@@ -79,60 +83,76 @@ func (rcvr *Rcvr_NamedPipe) openNamedPipeServer() (err error) {
 	return nil
 }
 
+var workerIdMux sync.Mutex
+var workerId uint64
+
+func makeWorkerId() uint64 {
+	workerIdMux.Lock()
+	id := workerId
+	workerId++
+	workerIdMux.Unlock()
+	return id
+}
+
 // Listen for incoming connections from Trace2 clients.
 // Dispatch each to a worker thread.
-func (rcvr *Rcvr_NamedPipe) listenLoop() {
-	var wg sync.WaitGroup
-	var worker_id uint64
+func (rcvr *Rcvr_NamedPipe) listenLoop(acceptPoolSize int) {
+	acceptWorkerDoneCh := make(chan bool, acceptPoolSize)
+	var nrFinished int
 
-	doneListening := make(chan bool, 1)
+	for acceptId := 0; acceptId < acceptPoolSize; acceptId++ {
+		go rcvr.acceptWorker(acceptId, acceptWorkerDoneCh)
+	}
 
-	// Create a subordinate thread to watch for `context.cancelFunc`
-	// being called by another thread.  We need to interrupt our
-	// (blocking) call to `Accept()` in this thread and start
-	// shutting down.
-	//
-	// However, we don't want to leak this subordinate thread if
-	// our loop terminates for other reasons.
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	// Watch for `context.cancelFunc` being called by another thread
+	// while we wait for our accept workers to finish.
+
+for_loop:
+	for {
 		select {
 		case <-rcvr.Base.ctx.Done():
 			// Force close the socket so that current and
-			// futuer calls to `Accept()` will fail.
+			// future calls to `Accept()` will fail.
 			rcvr.listener.Close()
-		case <-doneListening:
+		case <-acceptWorkerDoneCh:
+			nrFinished++
+			if nrFinished == acceptPoolSize {
+				break for_loop
+			}
 		}
-	}()
+	}
 
+	//rcvr.Base.Logger.Debug(fmt.Sprintf("listenLoop: finished[%d]", nrFinished))
+}
+
+func (rcvr *Rcvr_NamedPipe) acceptWorker(acceptId int, doneCh chan bool) {
+	//rcvr.Base.Logger.Debug(fmt.Sprintf("acceptWorker[%d] starting", acceptId))
 	for {
+		//rcvr.Base.Logger.Debug(fmt.Sprintf("acceptWorker[%d] calling Accept()", acceptId))
 		conn, err := rcvr.listener.Accept()
+		//rcvr.Base.Logger.Debug(fmt.Sprintf("acceptWorker[%d] result '%v'", acceptId, err))
 		if errors.Is(err, net.ErrClosed) {
 			break
-		} else if err != nil {
+		}
+		if err != nil {
 			// Perhaps the client hung up before
 			// we could service this connection.
 			rcvr.Base.Logger.Error(err.Error())
 		} else {
-			worker_id++
-			go rcvr.worker(conn, worker_id)
+			go rcvr.worker(conn, acceptId, makeWorkerId())
 		}
 	}
 
-	// Tell the subordinate thread that we are finished accepting
-	// connections so it can go away now.  This must not block
-	// (because the subordinate may already be one (which is the
-	// case if the `context.cancelFunc` was called)).
-	doneListening <- true
-
-	wg.Wait()
+	doneCh <- true
+	//rcvr.Base.Logger.Debug(fmt.Sprintf("acceptWorker[%d] finished", acceptId))
 }
 
-func (rcvr *Rcvr_NamedPipe) worker(conn net.Conn, worker_id uint64) {
+func (rcvr *Rcvr_NamedPipe) worker(conn net.Conn, acceptId int, workerId uint64) {
 	var haveError = false
 	var wg sync.WaitGroup
 	defer conn.Close()
+
+	//rcvr.Base.Logger.Debug(fmt.Sprintf("worker[%d,%d] starting", acceptId, workerId))
 
 	doneReading := make(chan bool, 1)
 
@@ -179,9 +199,10 @@ func (rcvr *Rcvr_NamedPipe) worker(conn net.Conn, worker_id uint64) {
 	for {
 		rawLine, err := r.ReadBytes('\n')
 		if err == io.EOF {
-			if nrBytesRead == 0 {
-				rcvr.Base.Logger.Debug(fmt.Sprintf("[dsid %06d] EOF after %d bytes", tr2.datasetId, nrBytesRead))
-			}
+			//if nrBytesRead == 0 {
+			//	rcvr.Base.Logger.Debug(fmt.Sprintf("worker[%d,%d][dsid %06d] EOF after %d bytes",
+			//		acceptId, workerId, tr2.datasetId, nrBytesRead))
+			//}
 			break
 		}
 		if errors.Is(err, net.ErrClosed) {
@@ -216,4 +237,6 @@ func (rcvr *Rcvr_NamedPipe) worker(conn net.Conn, worker_id uint64) {
 
 	// Wait for our subordinate thread to exit
 	wg.Wait()
+
+	//rcvr.Base.Logger.Debug(fmt.Sprintf("worker[%d,%d] finished", acceptId, workerId))
 }
