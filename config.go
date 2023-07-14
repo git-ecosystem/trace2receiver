@@ -47,11 +47,11 @@ type Config struct {
 
 	// Pathname to YML file containing PII settings.
 	PiiSettingsPath string `mapstructure:"pii"`
-	PiiSettings     *PiiSettings
+	piiSettings     *PiiSettings
 
 	// Pathname to YML file containing our filter settings.
 	FilterSettingsPath string `mapstructure:"filter"`
-	FilterSettings     *FilterSettings
+	filterSettings     *FilterSettings
 }
 
 // `Validate()` checks if the receiver configuration is valid.
@@ -98,14 +98,14 @@ func (cfg *Config) Validate() error {
 	}
 
 	if len(cfg.PiiSettingsPath) > 0 {
-		cfg.PiiSettings, err = parsePiiFile(cfg.PiiSettingsPath)
+		cfg.piiSettings, err = parsePiiFile(cfg.PiiSettingsPath)
 		if err != nil {
 			return err
 		}
 	}
 
 	if len(cfg.FilterSettingsPath) > 0 {
-		cfg.FilterSettings, err = parseFilterSettings(cfg.FilterSettingsPath)
+		cfg.filterSettings, err = parseFilterSettings(cfg.FilterSettingsPath)
 		if err != nil {
 			return err
 		}

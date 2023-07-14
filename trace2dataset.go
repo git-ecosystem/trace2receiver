@@ -499,7 +499,7 @@ func (tr2 *trace2Dataset) exportTraces() {
 	}
 
 	dl, dl_debug := computeDetailLevel(
-		tr2.rcvr_base.RcvrConfig.FilterSettings,
+		tr2.rcvr_base.RcvrConfig.filterSettings,
 		tr2.process.paramSetValues,
 		tr2.process.qualifiedNames)
 
