@@ -40,13 +40,13 @@ func createTraces(_ context.Context,
 // possibly the connection from the client process.
 // Add any requested PII data to `tr2.pii[]`.
 func (tr2 *trace2Dataset) pii_gather(cfg *Config) {
-	if cfg.PiiSettings != nil && cfg.PiiSettings.Include.Hostname {
+	if cfg.piiSettings != nil && cfg.piiSettings.Include.Hostname {
 		if h, err := os.Hostname(); err == nil {
 			tr2.pii[string(Trace2PiiHostname)] = h
 		}
 	}
 
-	if cfg.PiiSettings != nil && cfg.PiiSettings.Include.Username {
+	if cfg.piiSettings != nil && cfg.piiSettings.Include.Username {
 		// TODO For now, just lookup the current user.  This may
 		// or may not be valid when the service is officially
 		// installed.  Ideally we should get the user-id of the
