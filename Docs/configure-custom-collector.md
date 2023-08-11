@@ -42,10 +42,10 @@ The `trace2receiver` component has the following config values:
 ```
 receivers:
   trace2receiver:
-    socket:          <unix-domain-socket-pathname>
-    pipe:            <windows-named-pipe-pathname>
-    pii_settings:    <pii-settings-pathname>
-    filter_settings: <filter-settings-pathname>
+    socket: <unix-domain-socket-pathname>
+    pipe:   <windows-named-pipe-pathname>
+    pii:    <pii-settings-pathname>
+    filter: <filter-settings-pathname>
 ```
 
 For example:
@@ -53,10 +53,10 @@ For example:
 ```
 receivers:
   trace2receiver:
-    socket:          "/usr/local/my-collector/trace2.socket"
-    pipe:            "//./pipe/my-collector.pipe"
-    pii_settings:    "/usr/local/my-collector/pii.yml"
-    filter_settings: "/usr/local/my-collector/filter.yml"
+    socket: "/usr/local/my-collector/trace2.socket"
+    pipe:   "//./pipe/my-collector.pipe"
+    pii:    "/usr/local/my-collector/pii.yml"
+    filter: "/usr/local/my-collector/filter.yml"
 ```
 
 ### `<unix-domain-socket-pathname>` (Required on Unix)

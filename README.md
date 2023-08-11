@@ -1,73 +1,62 @@
-# `trace2receiver` README
+## Trace2 Receiver
+
+The `trace2receiver` project is a
+[trace receiver](https://opentelemetry.io/docs/collector/trace-receiver/)
+component library for an
+[OpenTelemetry Custom Collector](https://opentelemetry.io/docs/collector/)
+daemon.  It receives
+[Git Trace2](https://git-scm.com/docs/api-trace2#_the_event_format_target)
+telemetry from local Git commands, translates it into an OpenTelemetry
+format, and forwards it to other OpenTelemetry components.
+
+This component is useful it you want to collect performance data for
+Git commands, aggregate data from multiple users to create performance
+dashboards, build distributed traces of nested Git commands, or
+understand how the size and shape of your Git repositories affect
+command performance.
+
+
+## Background
+
+This project is a GOLANG static library component that must be linked
+into an OpenTelemetry Custom Collector along with other pipeline and
+exporter components to process and forward the telemetry data to a
+data store, such as Azure Monitor or another
+[OTLP](https://opentelemetry.io/docs/specs/otel/protocol/)
+aware cloud provider.
+
+Setup and configuration details are provided in the
+[Docs](./Docs/README.md).
+
+This project is under active development, and loves contributions from the community.
+Check out the
+[CONTRIBUTING](./CONTRIBUTING.md)
+guide for details on getting started.
+
+
+## Requirements
+
+This project is written in GOLANG and uses
+[OpenTelemetry](https://opentelemetry.io/docs/getting-started/dev/)
+libraries and tools.  See the OpenTelemetry documentation for more
+information.
+
+This project runs on Linux, macOS, and Windows.
 
 
 
-## About `trace2receiver`
+## License
 
-This directory contains the source for the `trace2receiver`
-component library.
-
-* It is designed to be used within an
-[OpenTelemetry (OTEL) Collector](https://opentelemetry.io/docs/collector/)
-service daemon.
-* It is an instance of a
-[Trace Receiver](https://opentelemetry.io/docs/collector/trace-receiver/).
-* It is responsible for listening to Trace2 telemetry data from Git
-commands, translating it into OTEL in-memory data structures,
-and forwarding it to other collector components.  For example, export
-components to generate
-[OTLP](https://opentelemetry.io/docs/specs/otel/protocol/) format
-telemetry and transmit it to the cloud.
+This project is licensed under the terms of the MIT open source license.
+Please refer to [LICENSE](./LICENSE) for the full terms.
 
 
+## Maintainers
 
-## Generating a new Custom Collector
-
-If you don't have an OTEL Collector service daemon, you can use the
-OTEL Collector Builder tool to
-[generate a new custom collector](./Docs/generate-custom-collector.md)
-to contain the `trace2receiver` component.
+See [CODEOWNERS](./CODEOWNERS) for a list of current project maintainers.
 
 
+## Support
 
-## Configure a Custom Collector
-
-After building your custom collector and statically linking all of the
-required components, you can run your collector service daemon.
-It requires a
-[`config.yml` configuration file](./Docs/configure-custom-collector.md)
-to specify which (of the linked) components you actually want to use
-and how they should be connected and configured.
-
-This `config.yml` file will be read in by the collector when it starts up,
-so you should plan to distribute it with the executable.
-
-If you want to change your `config.yml` or any of the filter or
-privacy files that it references, you'll need to stop and restart your
-collector service daemon, since these files are only read during startup.
-
-
-
-## Appendix: Caveats
-
-### Unmonitored Git Commands
-
-Long-running Git commands like `git fsmonitor--daemon run` that
-operate background are incompatible with the `trace2receiver` because
-they are designed to run for days and the OTEL telemetry is only
-generated when the process exits.  The receiver automatically drops
-the pipe/socket connection from such daemon commands as quickly as
-possible to avoid wasting resources.
-
-
-
-### Updating Filter Specifications
-
-There have been requests to have the receiver periodically poll
-some web endpoint for updated filter specifications.  This is
-outside of the scope of the `trace2receiver` component, since it
-operates as a component within an unknown OTEL Custom Collector.
-
-This functionality can be easily provided by an Administrator
-cron script to poll a web service that they own and restart the
-collector as necessary.
+See [SUPPORT](./SUPPORT.md) for instructions on how to file bugs, make feature
+requests, or seek help.
