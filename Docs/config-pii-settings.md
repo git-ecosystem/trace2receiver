@@ -10,7 +10,7 @@ NOTE: These flags may add GDPR-sensitive data to the OTEL telemetry
 data stream.  Use them at your own risk.
 
 The PII settings pathname is set in the
-`receivers.trace2receiver.pii_settings`
+`receivers.trace2receiver.pii`
 parameter in the main `config.yml` file.
 
 ## `pii.yml` Syntax

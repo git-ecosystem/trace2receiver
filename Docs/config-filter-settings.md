@@ -7,7 +7,7 @@ independent of any statistical filtering performed by later stages in
 the OTEL Collector pipeline.
 
 The filter settings pathname is set in the
-`receivers.trace2receiver.filter_settings`
+`receivers.trace2receiver.filter`
 parameter in the main `config.yml` file.
 
 
