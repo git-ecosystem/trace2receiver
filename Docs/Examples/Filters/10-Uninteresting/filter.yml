@@ -1,0 +1,16 @@
+# Filter the Trace2 data stream before generating OTLP.  Use a single
+# ruleset to filter out "uninteresting" commands and only generate
+# data for "interesting" ones.
+#
+# Since no `nickname_key` or `ruleset_key` is defined, commands
+# will inherit the default ruleset.  And we don't need to define
+# `git config` values for them.
+#
+# TODO:
+# [1] Update the absolute pathname to the yml file.
+
+rulesets:
+  "rs:interesting": "<my-data-dir>/rs-interesting.yml"
+
+defaults:
+  ruleset: "rs:interesting"

@@ -1,0 +1,28 @@
+# Filter the Trace2 data stream before generating OTLP.
+# Define nickname to allow repo instances to identify themselves.
+# Create different rulesets for different nicknames.
+# Filter out uninteresting commands from monorepos.
+# Drop all data for personal repos.
+# Generate summary data for any other repos.
+#
+# To use this example, you must add `otel.trace2.*` to the system
+# or global Git config:
+#
+#   `git config --system trace2.configparams 'otel.trace2.*'`
+#
+# in order to cause Git to send the repo instance's nickname
+# in the telemetry stream.
+
+keynames:
+  nickname_key: "otel.trace2.nickname"
+
+nicknames:
+  "monorepo": "rs:monorepo"
+  "private":  "dl:drop"
+
+rulesets:
+  "rs:monorepo": "<my-data-dir>/rs-monorepo.yml"
+  "rs:other":    "<my-data-dir>/rs-other.yml"
+
+defaults:
+  ruleset: "rs:other"

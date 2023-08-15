@@ -1,0 +1,11 @@
+# Generate verbose data for interesting commands, summary data for status,
+# and discard data from all others commands.
+
+commands:
+  "git:fetch":  "dl:verbose"
+  "git:pull":   "dl:verbose"
+  "git:push":   "dl:verbose"
+  "git:status": "dl:summary"
+
+defaults:
+  detail: "dl:drop"

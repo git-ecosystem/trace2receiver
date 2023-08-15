@@ -27,7 +27,28 @@ collector source code.
 
 
 
-### Example `builder-config.yml`
+## Available Exporter Components
+
+The modular nature of the OTEL Collector allows us to bundle
+many different exporters into the collector executable and then
+simply refer to them in the `config.yml` file.
+
+There are too many exporters in the catalog to include them all
+in a generated collector, so just select the ones that you need.
+Here are a few popular ones:
+
+1. [OTLP](https://pkg.go.dev/go.opentelemetry.io/collector/exporter/otlpexporter#section-readme)
+2. [Azure Monitor Application Insights](https://pkg.go.dev/github.com/open-telemetry/opentelemetry-collector-contrib/exporter/azuremonitorexporter)
+3. [Local Logging](https://pkg.go.dev/go.opentelemetry.io/collector/exporter/loggingexporter)
+
+Others can be found here:
+
+* [Primary Exporters](https://github.com/open-telemetry/opentelemetry-collector/tree/main/exporter)
+* [Contrib Exporters](https://github.com/open-telemetry/opentelemetry-collector-contrib/tree/main/exporter)
+
+
+
+## Example `builder-config.yml`
 
 Your `builder-config.yml` file should list all of the components that
 you want to use.  These will be statically linked into your collector's
@@ -35,8 +56,8 @@ executable.  For example:
 
 ```
 dist:
-  module: <my-module-name>
-  name: <my-executable-name>
+  module: <my-collector-module-name>
+  name: <my-collector-executable-name>
   output_path: <my-generated-source-directory>
   ...
 
@@ -68,7 +89,7 @@ custom collector.
 
 
 
-### Running the Builder Tool
+## Running the Builder Tool
 
 
 ```
