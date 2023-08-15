@@ -1,4 +1,4 @@
-module github.com/github/trace2receiver
+module github.com/git-ecosystem/trace2receiver
 
 go 1.20
 
