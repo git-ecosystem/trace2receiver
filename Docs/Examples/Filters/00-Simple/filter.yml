@@ -1,0 +1,12 @@
+# Filter the Trace2 data stream before generating OTLP.
+# Use a single detail level for all commands on all repos.
+#
+# TODO:
+# [1] Uncomment the one you want.  The builtin default of
+#     "dl:summary" is used otherwise.
+
+defaults:
+# ruleset: "dl:drop"     # An expensive way to do nothing.
+# ruleset: "dl:summary"  # The builtin default.
+# ruleset: "dl:process"
+# ruleset: "dl:verbose"

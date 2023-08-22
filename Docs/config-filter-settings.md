@@ -29,8 +29,8 @@ foundation of the filtering system.
 2. *Rulesets:* Rulesets build upon detail levels. They let you define
 a meaningful name for a set of filtering patterns, such as dropping
 telemetry for "uninteresting" commands and requesting verbose
-telemetry for "interesting" ones. Ruleset can only refer to detail
-levels, not other rulesets.
+telemetry for "interesting" ones. Rulesets can only refer to detail
+levels. They cannot refer to other rulesets.
 
 3. *Repo Nicknames:* Repo Nicknames are an aliasing technique built on
 top of rulesets.  They serve two roles: (1) they select a detail level
@@ -65,7 +65,7 @@ them from ruleset names and repo nicknames.
 primary focus is the lifespan of the command, the arguments, and exit
 code.
 
-3. `dl:process` -- Add process-level data events, process-level timer
+3. `dl:process` -- Adds process-level data events, process-level timer
 and counter values, and child process (and hook) events to the
 summary-level data.
 
@@ -87,10 +87,8 @@ The content of a ruleset is defined in a
 [ruleset file](./config-ruleset-definition.md).
 
 A ruleset name is essentially an alias for the underlying ruleset
-file. This makes it easier for a Git command to request that a
-particular ruleset be used while hiding the actual ruleset pathname
-(which might be relative to the custom collector rather than the
-Git process).
+file.  Using a ruleset name avoids requiring users know how and where
+the telemetry service is installed.
 
 The `filter.yml` file contains a dictionary to map ruleset names to
 pathnames:
@@ -104,6 +102,11 @@ rulesets:
 
 Ruleset files will be loaded when the receiver starts up.
 
+> [!NOTE]
+> If you want to modify the list of rulesets or edit one of the
+> ruleset files, you'll need to restart the telemetry service
+> when you're finished.
+
 
 
 ### Repo Nicknames
@@ -113,16 +116,16 @@ Conceptually, this is a way to say that this repo is an instance
 of project "foo" and that telemetry data from it can be aggregated
 with Git command data from other instances of project "foo".
 
-It also lets us say that all instances of project "foo" should use
+This avoids the need for the telemetry service or data store to try to
+_guess_ how to aggregate data by parsing the `remote.origin.url` or
+the basename of the repo root directory.  Users can simple say that
+this repo is an instance of repo "foo" and aggregate or partition
+data as they want.
+
+Nicknames also let us say that all instances of repo "foo" should use
 the ruleset "rs:bar".
 
-This is avoids the need to try to _guess_ the repo grouping using Git
-config fields like `remote.origin.url` or the name of the repo root
-directory.  Users can simple say that this repo is a member of project
-"foo" and an OTEL data store can aggregate data across all users, for
-example.
-
-A repo nickname is simple string without either `dl:` or `rs:` prefix.
+A repo nickname is a simple string without either `dl:` or `rs:` prefix.
 
 The `filter.yml` file contains a dictionary to map nicknames to detail
 levels or rulesets:
@@ -170,9 +173,12 @@ keynames:
 
 ### Using the Repo Nickname Config Setting
 
-Then we can set repo nicknames on our repos using the Git config
+We can set repo nicknames on our repos using the Git config
 setting named in the `nickname_key` parameter.  Thereafter, Git will
-silently send the nickname on every Git command in those repos:
+silently send the nickname on every Git command in those repos.
+
+The nickname should be local to the individual repo.
+
 
 ```
 $ cd /path/to/my/repo1
@@ -185,33 +191,40 @@ $ cd /path/to/my/repo3
 $ git config --local otel.trace2.nickname "personal"
 ```
 
-Or set it for a single command:
+Or you can set it for a single command:
 
 ```
 $ cd /path/to/my/repo4
 $ git -c otel.trace2.nickname=personal status
 ```
 
-If the repo nickname is not defined in the `filter.yml` file,
-the receiver will fall back to the default filter settings.
+If no nickname is defined or the given repo nickname is not defined in
+the `filter.yml` file, the receiver will fall back to the default
+filter settings.
 
 _In the above example, I've suggested "monorepo" and "personal" as
 nicknames, but you might use the base name of the repo, such as
 `git.git` or `chromium.git` or just `chromium`.  Or you might use a
-project codename and hide the origin URL.  Or you might use it to
-define a different nickname for desktop users versus build servers.
-The goal here is to help the OTEL data store aggregate telemetry from
-comparable sources, since plotting P80 `git status` or `git fetch`
-times across different repos or machine classes may not be that
-useful._
+project codename (and further hide the origin URL)._
+
+_You might use different nicknames for desktop users versus build
+servers on instances of the same repo to help partition the data in
+the data store by use cases or machine classes.  For example, you
+might want to see the P80 fetch times for interactive users and not
+have to sift thru fetches from build machines._
 
 
 
 ### Using the Ruleset Config Setting
 
-As an alternative to using a repo nickname, you can request a specific
-ruleset or detail level using the Git config setting named in the
-`ruleset_key` parameter:
+The repo nickname helps identify/classify the data and lets you set an
+expected ruleset.  However, there are times when you might want to
+maintain the above classification, but use different verbosity for
+some commands or for some repo instances.
+
+The `ruleset_key` parameter lets you explicitly select a ruleset and
+override the ruleset associated with the nickname.
+
 
 ```
 $ cd /path/to/my/repo1

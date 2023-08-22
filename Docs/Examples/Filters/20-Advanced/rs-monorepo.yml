@@ -1,0 +1,15 @@
+# Generate verbose data for push, pull, and status and process-level
+# data for other commands.
+#
+# You might use this to investigate problematic push and pull times,
+# and then extend it to include more details on sub-commands like
+# index-pack, remote-https, gc, and switching branches.
+
+commands:
+  "git:fetch":  "dl:verbose"
+  "git:pull":   "dl:verbose"
+  "git:push":   "dl:verbose"
+  "git:status": "dl:verbose"
+
+defaults:
+  detail: "dl:process"

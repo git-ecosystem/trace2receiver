@@ -1,0 +1,11 @@
+# Generate summary data for the commands usually seen in dashboards
+# and drop data for trivial housekeeping commands.
+
+commands:
+  "git:fetch":  "dl:summary"
+  "git:pull":   "dl:summary"
+  "git:push":   "dl:summary"
+  "git:status": "dl:summary"
+
+defaults:
+  detail: "dl:drop"

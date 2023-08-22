@@ -1,0 +1,42 @@
+# This example dumps Trace2 data to the standard logging
+# stream when the service daemon runs.  This is usually
+# stderr when running it interactively.  It may be the
+# Windows Event Viewer on Windows when running as a service.
+#
+# TODO:
+# [1] Update the pathnames to point to your installation and/or
+#     ProgramData directory.
+#
+# You can enable `exporters.logging.verbosity` and/or
+# `service.telemetry.logs.level` to see debug logging.
+# THIS WILL GENERATE A LOT OF DATA, so use it with care.
+#
+# If you want to enable filtering and/or PII data, uncomment the
+# correpsonding lines and create the additional .yml files.
+
+receivers:
+  trace2receiver:
+    socket: "/usr/local/<my-install-dir>/trace2.socket"
+    pipe:   "//./pipe/<my-pipe-name>"
+
+#   filter: "/usr/local/<my-install-dir>/filter.yml"
+#   pii:    "/usr/local/<my-install-dir>/pii.yml"
+
+#   filter: "C:/ProgramData/<my-data-dir>/filter.yml"
+#   pii:    "C:/ProgramData/<my-data-dir>/pii.yml"
+
+processors:
+
+exporters:
+  logging:
+    verbosity: normal   # basic, normal, detailed
+
+service:
+  telemetry:
+    logs:
+      level: "INFO"     # "INFO", "DEBUG"
+  pipelines:
+    traces:
+      receivers: [trace2receiver]
+      processors: []
+      exporters: [logging]
