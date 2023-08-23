@@ -15,7 +15,7 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 
-	"github.com/Microsoft/go-winio"
+	"github.com/git-ecosystem/trace2receiver/internal/go-winio"
 )
 
 type Rcvr_NamedPipe struct {
