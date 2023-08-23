@@ -3,7 +3,6 @@ module github.com/git-ecosystem/trace2receiver
 go 1.20
 
 require (
-	github.com/Microsoft/go-winio v0.0.0
 	github.com/stretchr/testify v1.8.4
 	go.opentelemetry.io/collector/component v0.81.0
 	go.opentelemetry.io/collector/consumer v0.81.0
@@ -47,5 +46,3 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/Microsoft/go-winio v0.0.0 => github.com/jeffhostetler/go-winio v0.0.0-20230809205742-1750e7096a50
