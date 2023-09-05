@@ -34,6 +34,8 @@ var jm *jmap = &jmap{
 		"x": 1,
 		"y": "foo",
 	},
+
+	"alternate-time": "2023-01-14T15:04:05.999999+00:00",
 }
 
 // Optional getter functions
@@ -193,6 +195,12 @@ func Test_getRequiredTime_Present(t *testing.T) {
 	tm, err := jm.getRequiredTime("required-time")
 	if err != nil || tm.Year() != 2023 || tm.Month() != 1 || tm.Day() != 14 {
 		t.Fatalf("getRequiredTime")
+	}
+}
+func Test_tryAlternateTimeFormat(t *testing.T) {
+	tm, err := jm.getRequiredTime("alternate-time")
+	if err != nil || tm.Year() != 2023 || tm.Month() != 1 || tm.Day() != 14 {
+		t.Fatalf("getRequiredTime on alternate format")
 	}
 }
 func Test_getRequiredTime_NotPresent(t *testing.T) {

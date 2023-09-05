@@ -205,7 +205,13 @@ func (jm *jmap) getRequiredTime(key string) (time.Time, error) {
 
 	switch v := v.(type) {
 	case string:
-		return time.Parse("2006-01-02T15:04:05.999999Z", v)
+		t, err := time.Parse("2006-01-02T15:04:05.999999Z", v)
+		if err == nil {
+			return t, err
+		}
+		// A version of GCM sends "+00:00" for the TZ rather than a "Z".
+		t, err = time.Parse("2006-01-02T15:04:05.999999-07:00", v)
+		return t, err
 	default:
 		return time.Time{}, fmt.Errorf("key '%s' does not have string value", key)
 	}
