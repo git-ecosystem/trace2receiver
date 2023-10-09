@@ -28,6 +28,14 @@ aware cloud provider.
 Setup and configuration details are provided in the
 [Docs](./Docs/README.md).
 
+
+The [sample-trace2-otel-collector](https://github.com/git-ecosystem/sample-trace2-otel-collector)
+peer repository contains a pre-built open source sample collector to help you get started.  See the
+README for more details.
+
+
+## Contributions
+
 This project is under active development, and loves contributions from the community.
 Check out the
 [CONTRIBUTING](./CONTRIBUTING.md)
