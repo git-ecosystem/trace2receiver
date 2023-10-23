@@ -81,7 +81,7 @@ func TestDialListenerGetsCancelled(t *testing.T) {
 
 func TestDialAccessDeniedWithRestrictedSD(t *testing.T) {
 	c := PipeConfig{
-		SecurityDescriptor: "D:P(A;;0x1200FF;;;WD)",
+		SDDL: "D:P(A;;0x1200FF;;;WD)",
 	}
 	l, err := ListenPipe(testPipeName, &c)
 	if err != nil {

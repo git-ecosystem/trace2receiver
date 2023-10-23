@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/collector/component"
+	"golang.org/x/sys/windows"
 
 	"github.com/git-ecosystem/trace2receiver/internal/go-winio"
 )
@@ -61,16 +62,107 @@ func (rcvr *Rcvr_NamedPipe) Shutdown(context.Context) error {
 	return nil
 }
 
+func (rcvr *Rcvr_NamedPipe) makeSDDL() (sddl string, err error) {
+
+	adminSid, err := windows.CreateWellKnownSid(windows.WinBuiltinAdministratorsSid)
+	if err != nil {
+		rcvr.Base.Logger.Error(fmt.Sprintf("could not create adminSid: %v", err))
+		return "", err
+	}
+	systemSid, err := windows.CreateWellKnownSid(windows.WinLocalSystemSid)
+	if err != nil {
+		rcvr.Base.Logger.Error(fmt.Sprintf("could not create LocalSystemSid: %v", err))
+		return "", err
+	}
+	ownerSid, err := windows.CreateWellKnownSid(windows.WinCreatorOwnerSid)
+	if err != nil {
+		rcvr.Base.Logger.Error(fmt.Sprintf("could not create CreatorSid: %v", err))
+		return "", err
+	}
+	everyoneSid, err := windows.CreateWellKnownSid(windows.WinWorldSid)
+	if err != nil {
+		rcvr.Base.Logger.Error(fmt.Sprintf("could not create WorldSid: %v", err))
+		return "", err
+	}
+
+	access := []windows.EXPLICIT_ACCESS{
+		{
+			AccessPermissions: windows.GENERIC_ALL,
+			AccessMode:        windows.GRANT_ACCESS,
+			Trustee: windows.TRUSTEE{
+				TrusteeForm:  windows.TRUSTEE_IS_SID,
+				TrusteeType:  windows.TRUSTEE_IS_GROUP,
+				TrusteeValue: windows.TrusteeValueFromSID(adminSid),
+			},
+		},
+		{
+			AccessPermissions: windows.GENERIC_ALL,
+			AccessMode:        windows.GRANT_ACCESS,
+			Trustee: windows.TRUSTEE{
+				TrusteeForm:  windows.TRUSTEE_IS_SID,
+				TrusteeType:  windows.TRUSTEE_IS_GROUP,
+				TrusteeValue: windows.TrusteeValueFromSID(systemSid),
+			},
+		},
+		{
+			AccessPermissions: windows.GENERIC_ALL,
+			AccessMode:        windows.GRANT_ACCESS,
+			Trustee: windows.TRUSTEE{
+				TrusteeForm:  windows.TRUSTEE_IS_SID,
+				TrusteeType:  windows.TRUSTEE_IS_USER,
+				TrusteeValue: windows.TrusteeValueFromSID(ownerSid),
+			},
+		},
+		{
+			AccessPermissions: windows.GENERIC_WRITE | windows.GENERIC_READ,
+			AccessMode:        windows.GRANT_ACCESS,
+			Trustee: windows.TRUSTEE{
+				TrusteeForm:  windows.TRUSTEE_IS_SID,
+				TrusteeType:  windows.TRUSTEE_IS_GROUP,
+				TrusteeValue: windows.TrusteeValueFromSID(everyoneSid),
+			},
+		},
+	}
+
+	sd, err := windows.NewSecurityDescriptor()
+	if err != nil {
+		rcvr.Base.Logger.Error(fmt.Sprintf("could not create SD: %v", err))
+		return "", err
+	}
+
+	acl, err := windows.ACLFromEntries(access, nil)
+	if err != nil {
+		rcvr.Base.Logger.Error(fmt.Sprintf("could not create ACL: %v", err))
+		return "", err
+	}
+
+	err = sd.SetDACL(acl, true, false)
+	if err != nil {
+		rcvr.Base.Logger.Error(fmt.Sprintf("could not set ACL: %v", err))
+		return "", err
+	}
+
+	sddl = sd.String()
+	rcvr.Base.Logger.Debug(fmt.Sprintf("SDDL is: %v", sddl))
+	return sddl, nil
+}
+
 // Open the server-side of a named pipe.
 func (rcvr *Rcvr_NamedPipe) openNamedPipeServer(listenQueueSize int) (err error) {
 	_ = os.Remove(rcvr.NamedPipePath)
 
+	sddl, err := rcvr.makeSDDL()
+	if err != nil {
+		rcvr.Base.Logger.Error(fmt.Sprintf("could not create security descriptor for named pipe: %v", err))
+		return err
+	}
+
 	c := winio.PipeConfig{
-		SecurityDescriptor: "",
-		MessageMode:        false,
-		InputBufferSize:    65536,
-		OutputBufferSize:   65536,
-		QueueSize:          int32(listenQueueSize),
+		SDDL:             sddl,
+		MessageMode:      false,
+		InputBufferSize:  65536,
+		OutputBufferSize: 65536,
+		QueueSize:        int32(listenQueueSize),
 	}
 
 	rcvr.listener, err = winio.ListenPipe(rcvr.NamedPipePath, &c)
