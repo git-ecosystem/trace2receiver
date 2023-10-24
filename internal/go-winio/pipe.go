@@ -324,7 +324,7 @@ type win32PipeListener struct {
 	closeMux sync.Mutex
 }
 
-func makeServerPipeHandle(path string, sd []byte, c *PipeConfig, first bool) (windows.Handle, error) {
+func makeServerPipeHandle(path string, sddl string, c *PipeConfig, first bool) (windows.Handle, error) {
 	path16, err := windows.UTF16FromString(path)
 	if err != nil {
 		return 0, &os.PathError{Op: "open", Path: path, Err: err}
@@ -347,16 +347,9 @@ func makeServerPipeHandle(path string, sd []byte, c *PipeConfig, first bool) (wi
 
 	// The security descriptor is only needed for the first pipe.
 	if first {
-		if sd != nil {
-			//todo: does `sdb` need to be allocated on the heap, or can go allocate it?
-			l := uint32(len(sd))
-			sdb, err := windows.LocalAlloc(0, l)
-			if err != nil {
-				return 0, fmt.Errorf("LocalAlloc for security descriptor with of length %d: %w", l, err)
-			}
-			defer windows.LocalFree(windows.Handle(sdb)) //nolint:errcheck
-			copy((*[0xffff]byte)(unsafe.Pointer(sdb))[:], sd)
-			oa.SecurityDescriptor = (*securityDescriptor)(unsafe.Pointer(sdb))
+		if sddl != "" {
+			sd, _ := windows.SecurityDescriptorFromString(sddl)
+			oa.SecurityDescriptor = (*securityDescriptor)(unsafe.Pointer(sd))
 		} else {
 			// Construct the default named pipe security descriptor.
 			var dacl uintptr
@@ -418,7 +411,7 @@ func makeServerPipeHandle(path string, sd []byte, c *PipeConfig, first bool) (wi
 }
 
 func (l *win32PipeListener) makeServerPipe() (*win32File, error) {
-	h, err := makeServerPipeHandle(l.path, nil, &l.config, false)
+	h, err := makeServerPipeHandle(l.path, "", &l.config, false)
 	if err != nil {
 		return nil, err
 	}
@@ -502,8 +495,8 @@ func (l *win32PipeListener) listenerRoutine(queueSize int) {
 
 // PipeConfig contain configuration for the pipe listener.
 type PipeConfig struct {
-	// SecurityDescriptor contains a Windows security descriptor in SDDL format.
-	SecurityDescriptor string
+	// SDDL contains a Windows security descriptor in SDDL format.
+	SDDL string
 
 	// MessageMode determines whether the pipe is in byte or message mode. In either
 	// case the pipe is read in byte mode by default. The only practical difference in
@@ -536,18 +529,8 @@ type PipeConfig struct {
 // ListenPipe creates a listener on a Windows named pipe path, e.g. \\.\pipe\mypipe.
 // The pipe must not already exist.
 func ListenPipe(path string, c *PipeConfig) (net.Listener, error) {
-	var (
-		sd  []byte
-		err error
-	)
 	if c == nil {
 		c = &PipeConfig{}
-	}
-	if c.SecurityDescriptor != "" {
-		sd, err = SddlToSecurityDescriptor(c.SecurityDescriptor)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	queueSize := int(c.QueueSize)
@@ -559,7 +542,7 @@ func ListenPipe(path string, c *PipeConfig) (net.Listener, error) {
 		queueSize = 1
 	}
 
-	h, err := makeServerPipeHandle(path, sd, c, true)
+	h, err := makeServerPipeHandle(path, c.SDDL, c, true)
 	if err != nil {
 		return nil, err
 	}
