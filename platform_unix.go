@@ -22,12 +22,12 @@ func createTraces(_ context.Context,
 		return nil, component.ErrNilNextConsumer
 	}
 
-	logger := params.Logger
 	trace2Cfg := baseCfg.(*Config)
 
 	rcvr := &Rcvr_UnixSocket{
 		Base: &Rcvr_Base{
-			Logger:         logger,
+			Settings:       params,
+			Logger:         params.Logger,
 			TracesConsumer: consumer,
 			RcvrConfig:     trace2Cfg,
 		},

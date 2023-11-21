@@ -5,12 +5,14 @@ import (
 
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/consumer"
+	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 )
 
 type Rcvr_Base struct {
 	// These fields should be set in ctor() in platform_*.go:createTraces()
 	// when it is called from factory.go:NewFactory().
+	Settings        receiver.CreateSettings
 	Logger          *zap.Logger
 	TracesConsumer  consumer.Traces
 	MetricsConsumer consumer.Metrics

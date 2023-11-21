@@ -35,6 +35,8 @@ exporters:
 
 service:
   telemetry:
+    metrics:
+      level: none       # disable default prometheus metrics on http://localhost:8888/metrics
     logs:
       level: "INFO"     # "INFO", "DEBUG"
   pipelines:
