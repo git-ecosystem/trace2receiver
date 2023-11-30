@@ -282,7 +282,6 @@ func (rcvr *Rcvr_UnixSocket) listenLoop() {
 					break LOOP
 				}
 				rcvr.mutex.Unlock()
-				rcvr.Base.Logger.Info(fmt.Sprintf("socket still alive: %v", inode))
 			}
 		}
 	}()
