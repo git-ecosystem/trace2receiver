@@ -45,7 +45,7 @@ func (rcvr *Rcvr_UnixSocket) Start(unused_ctx context.Context, host component.Ho
 
 	err = rcvr.openSocketForListening()
 	if err != nil {
-		host.ReportFatalError(err)
+		rcvr.Base.Settings.TelemetrySettings.ReportStatus(component.NewFatalErrorEvent(err))
 		return err
 	}
 
@@ -259,7 +259,7 @@ func (rcvr *Rcvr_UnixSocket) listenLoop() {
 
 					rcvr.inode = 0
 
-					rcvr.Base.Settings.ReportComponentStatus(component.NewFatalErrorEvent(errStolen))
+					rcvr.Base.Settings.TelemetrySettings.ReportStatus(component.NewFatalErrorEvent(errStolen))
 					rcvr.mutex.Unlock()
 					break LOOP
 				}
@@ -277,7 +277,7 @@ func (rcvr *Rcvr_UnixSocket) listenLoop() {
 
 					rcvr.inode = 0
 
-					rcvr.Base.Settings.ReportComponentStatus(component.NewFatalErrorEvent(errStolen))
+					rcvr.Base.Settings.TelemetrySettings.ReportStatus(component.NewFatalErrorEvent(errStolen))
 					rcvr.mutex.Unlock()
 					break LOOP
 				}
