@@ -44,7 +44,7 @@ func (rcvr *Rcvr_NamedPipe) Start(unused_ctx context.Context, host component.Hos
 
 	err = rcvr.openNamedPipeServer(listenQueueSize)
 	if err != nil {
-		host.ReportFatalError(err)
+		rcvr.Base.Settings.TelemetrySettings.ReportStatus(component.NewFatalErrorEvent(err))
 		return err
 	}
 
