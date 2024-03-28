@@ -5,8 +5,11 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 )
 
+var (
+	typeStr = component.MustNewType("trace2receiver")
+)
+
 const (
-	typeStr   = "trace2receiver"
 	stability = component.StabilityLevelStable
 )
 

@@ -5,6 +5,7 @@ package trace2receiver
 
 import (
 	"context"
+	"errors"
 	"os"
 	"os/user"
 
@@ -13,13 +14,17 @@ import (
 	"go.opentelemetry.io/collector/receiver"
 )
 
+var (
+	errNilNextConsumer = errors.New("nil next Consumer")
+)
+
 func createTraces(_ context.Context,
 	params receiver.CreateSettings,
 	baseCfg component.Config,
 	consumer consumer.Traces) (receiver.Traces, error) {
 
 	if consumer == nil {
-		return nil, component.ErrNilNextConsumer
+		return nil, errNilNextConsumer
 	}
 
 	trace2Cfg := baseCfg.(*Config)
