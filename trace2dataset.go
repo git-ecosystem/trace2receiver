@@ -258,6 +258,7 @@ func NewTrace2Dataset(rcvr_base *Rcvr_Base) *trace2Dataset {
 	tr2.process.paramSetPriorities = make(map[string]int)
 
 	tr2.pii = make(map[string]string)
+	tr2.exec = make(map[int64]*TrExec)
 
 	return tr2
 }
