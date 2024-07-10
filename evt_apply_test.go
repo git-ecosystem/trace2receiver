@@ -222,6 +222,15 @@ func x_make_child_exit(id int64, pid int64, code int64) string {
 		code,
 		1.0)
 }
+func x_make_exec(id int64, exe string, a0 string, a1 string) string {
+	return fmt.Sprintf(`{%s,"exec_id":%d,"exe":"%s","argv":%s}`,
+		x_make_common(
+			"exec",
+			x_main),
+		id,
+		exe,
+		fmt.Sprintf(`["%s","%s"]`, a0, a1))
+}
 func x_make_region_enter(thread_name string, nesting int64, category string, label string, msg string) string {
 	return fmt.Sprintf(`{%s,"nesting":%d,"category":"%s","label":"%s","msg":"%s"}`,
 		x_make_common(
@@ -924,6 +933,37 @@ func Test_Dataset_RejectClient_FSMonitor(t *testing.T) {
 	rce, ok := err.(*RejectClientError)
 	assert.True(t, ok)
 	assert.True(t, rce.FSMonitor)
+}
+
+func Test_Dataset_Exec(t *testing.T) {
+
+	var events []string = []string{
+		x_make_version(),
+		x_make_start_argv1("xx"),
+		x_make_cmd_name_nh("foo", "qq"),
+		x_make_cmd_mode(),
+		x_make_alias(),
+
+		x_make_exec(0, "git", "a0", "a1"),
+
+		x_make_atexit(), // should be last
+	}
+
+	tr2, sufficient, _ := load_test_dataset(t, events)
+	assert.True(t, sufficient, "have sufficient data")
+	assert.Equal(t, tr2.trace2SID, x_sid)
+	assert.Equal(t, tr2.process.qualifiedNames.exe, "xx")
+	assert.Equal(t, tr2.process.qualifiedNames.exeVerb, "xx:foo")
+	assert.Equal(t, tr2.process.qualifiedNames.exeVerbMode, "xx:foo#x-mode")
+
+	assert.Equal(t, len(tr2.exec), 1)
+	assert.NotNil(t, tr2.exec)
+	assert.NotNil(t, tr2.exec[0])
+
+	assert.Equal(t, tr2.exec[0].exe, "git")
+	assert.Equal(t, len(tr2.exec[0].argv), 2)
+	assert.Equal(t, tr2.exec[0].argv[0], "a0")
+	assert.Equal(t, tr2.exec[0].argv[1], "a1")
 }
 
 // Given an array of raw Trace2 messages, parse and appy them
