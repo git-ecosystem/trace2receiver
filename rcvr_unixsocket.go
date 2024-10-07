@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/component/componentstatus"
 	"golang.org/x/sys/unix"
 )
 
@@ -45,11 +46,11 @@ func (rcvr *Rcvr_UnixSocket) Start(unused_ctx context.Context, host component.Ho
 
 	err = rcvr.openSocketForListening()
 	if err != nil {
-		rcvr.Base.Settings.TelemetrySettings.ReportStatus(component.NewFatalErrorEvent(err))
+		componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
 		return err
 	}
 
-	go rcvr.listenLoop()
+	go rcvr.listenLoop(host)
 	return nil
 }
 
@@ -203,7 +204,7 @@ func (rcvr *Rcvr_UnixSocket) openSocketForListening() error {
 
 // Listen for incoming connections from Trace2 clients.
 // Dispatch each to a worker thread.
-func (rcvr *Rcvr_UnixSocket) listenLoop() {
+func (rcvr *Rcvr_UnixSocket) listenLoop(host component.Host) {
 	var wg sync.WaitGroup
 	var worker_id uint64
 
@@ -259,7 +260,7 @@ func (rcvr *Rcvr_UnixSocket) listenLoop() {
 
 					rcvr.inode = 0
 
-					rcvr.Base.Settings.TelemetrySettings.ReportStatus(component.NewFatalErrorEvent(errStolen))
+					componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(errStolen))
 					rcvr.mutex.Unlock()
 					break LOOP
 				}
@@ -277,7 +278,7 @@ func (rcvr *Rcvr_UnixSocket) listenLoop() {
 
 					rcvr.inode = 0
 
-					rcvr.Base.Settings.TelemetrySettings.ReportStatus(component.NewFatalErrorEvent(errStolen))
+					componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(errStolen))
 					rcvr.mutex.Unlock()
 					break LOOP
 				}

@@ -14,6 +14,7 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/collector/component"
+	"go.opentelemetry.io/collector/component/componentstatus"
 	"golang.org/x/sys/windows"
 
 	"github.com/git-ecosystem/trace2receiver/internal/go-winio"
@@ -44,7 +45,7 @@ func (rcvr *Rcvr_NamedPipe) Start(unused_ctx context.Context, host component.Hos
 
 	err = rcvr.openNamedPipeServer(listenQueueSize)
 	if err != nil {
-		rcvr.Base.Settings.TelemetrySettings.ReportStatus(component.NewFatalErrorEvent(err))
+		componentstatus.ReportStatus(host, componentstatus.NewFatalErrorEvent(err))
 		return err
 	}
 

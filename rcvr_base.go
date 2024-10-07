@@ -12,7 +12,7 @@ import (
 type Rcvr_Base struct {
 	// These fields should be set in ctor() in platform_*.go:createTraces()
 	// when it is called from factory.go:NewFactory().
-	Settings        receiver.CreateSettings
+	Settings        receiver.Settings
 	Logger          *zap.Logger
 	TracesConsumer  consumer.Traces
 	MetricsConsumer consumer.Metrics

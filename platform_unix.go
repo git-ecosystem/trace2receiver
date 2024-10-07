@@ -19,7 +19,7 @@ var (
 )
 
 func createTraces(_ context.Context,
-	params receiver.CreateSettings,
+	params receiver.Settings,
 	baseCfg component.Config,
 	consumer consumer.Traces) (receiver.Traces, error) {
 
