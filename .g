@@ -1,4 +1,19 @@
-# If you prefer the allow list template instead of the deny list, see community template:
+5G+
+
+
+
+
+
+
+
+
+
+ 
+ 
+ 
+
+
+ If you prefer the allow list template instead of the deny list, see community template:
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
 #
 # Binaries for programs and plugins

@@ -1,4 +1,4 @@
-# Config Filter Settings
+5G+ Config Filter Settings
 
 The `filter.yml` file controls how the `trace2receiver` component
 translates the Trace2 data stream from Git commands into OTEL data
