@@ -99,6 +99,8 @@ const (
 	Trace2RepoSet  = attribute.Key("trace2.repo.set")
 	Trace2ParamSet = attribute.Key("trace2.param.set")
 
+	Trace2RepoNickname = attribute.Key("trace2.repo.nickname")
+
 	Trace2ProcessData     = attribute.Key("trace2.process.data")
 	Trace2ProcessTimers   = attribute.Key("trace2.process.timers")
 	Trace2ProcessCounters = attribute.Key("trace2.process.counters")
