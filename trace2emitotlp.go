@@ -89,7 +89,7 @@ func (tr2 *trace2Dataset) insertResourceInstrumentationScope(instScope pcommon.I
 	instScope.SetVersion(Trace2ReceiverVersion)
 }
 
-func (tr2 *trace2Dataset) ToTraces(dl FilterDetailLevel) ptrace.Traces {
+func (tr2 *trace2Dataset) ToTraces(dl FilterDetailLevel, keynames FilterKeynames) ptrace.Traces {
 	pt := ptrace.NewTraces()
 
 	resourceSpans := pt.ResourceSpans().AppendEmpty()
@@ -108,7 +108,7 @@ func (tr2 *trace2Dataset) ToTraces(dl FilterDetailLevel) ptrace.Traces {
 
 	// Create an OTEL span for the entire process (aka the main thread).
 	exeSpan := scopes.Spans().AppendEmpty()
-	emitProcessSpan(&exeSpan, tr2, dl)
+	emitProcessSpan(&exeSpan, tr2, dl, keynames)
 
 	if WantRegionAndThreadSpans(dl) {
 		// Create an OTEL span for the lifetime of each non-main thread.
@@ -188,7 +188,7 @@ func emitSpanEssentials(span *ptrace.Span, r *TrSpanEssentials, tr2 *trace2Datas
 	span.SetTraceID(tr2.otelTraceID)
 }
 
-func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset, dl FilterDetailLevel) {
+func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset, dl FilterDetailLevel, keynames FilterKeynames) {
 	emitSpanEssentials(span, &tr2.process.mainThread.lifetime, tr2)
 	span.SetKind(ptrace.SpanKindServer)
 
@@ -252,6 +252,16 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset, dl FilterDetailLevel
 	if tr2.process.paramSetValues != nil && len(tr2.process.paramSetValues) > 0 {
 		jargs, _ := json.Marshal(tr2.process.paramSetValues)
 		sm.PutStr(string(Trace2ParamSet), string(jargs))
+	}
+
+	// Emit the repo nickname value directly if present.  This is done to make
+	// it easier to query on them in the collector pipeline without having to
+	// parse JSON blobs.
+	if len(keynames.NicknameKey) > 0 {
+		nnvalue, ok := tr2.process.paramSetValues[keynames.NicknameKey]
+		if ok && len(nnvalue) > 0 {
+			sm.PutStr(string(Trace2RepoNickname), nnvalue)
+		}
 	}
 
 	if WantMainThreadTimersAndCounters(dl) {
