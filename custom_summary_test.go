@@ -541,6 +541,60 @@ func Test_RegionTimerAggregation_TimeOnly(t *testing.T) {
 	assert.InDelta(t, 10.0, summaryMap["testTime"], 0.1)
 }
 
+// Test that custom summary is emitted at dl:summary level
+func Test_CustomSummary_EmittedAtSummaryLevel(t *testing.T) {
+	// Create a minimal config with custom summary
+	cfg := &Config{
+		customSummary: &CustomSummarySettings{
+			MessagePatterns: []MessagePatternRule{
+				{Prefix: "test_msg:", FieldName: "msgCount"},
+			},
+		},
+		filterSettings: &FilterSettings{},
+	}
+
+	rcvr := &Rcvr_Base{
+		RcvrConfig: cfg,
+	}
+
+	// Create a trace2 dataset with custom summary
+	tr2 := NewTrace2Dataset(rcvr)
+
+	// Manually initialize process to have custom summary
+	if tr2.process.customSummary != nil {
+		tr2.process.customSummary.incrementMessageCount("msgCount")
+	} else {
+		t.Fatal("customSummary should be initialized")
+	}
+
+	// Set up minimal process data for trace emission
+	tr2.process.paramSetValues = make(map[string]string)
+	tr2.process.mainThread.lifetime.startTime = mustParseTime(t, "2024-01-01T10:00:00Z")
+	tr2.process.mainThread.lifetime.endTime = mustParseTime(t, "2024-01-01T10:00:10Z")
+
+	// Convert to OTLP traces at dl:summary level
+	traces := tr2.ToTraces(DetailLevelSummary, FilterKeynames{})
+
+	// Verify we have spans
+	assert.Equal(t, 1, traces.ResourceSpans().Len())
+	rs := traces.ResourceSpans().At(0)
+	assert.Equal(t, 1, rs.ScopeSpans().Len())
+	ss := rs.ScopeSpans().At(0)
+	assert.Greater(t, ss.Spans().Len(), 0)
+
+	// Find the process span and check for custom summary
+	processSpan := ss.Spans().At(0)
+	attrs := processSpan.Attributes()
+
+	customSummaryVal, found := attrs.Get("trace2.process.custom_summary")
+	assert.True(t, found, "custom_summary should be present at dl:summary level")
+
+	// Verify the JSON contains our count
+	jsonStr := customSummaryVal.Str()
+	assert.Contains(t, jsonStr, "msgCount")
+	assert.Contains(t, jsonStr, "1")
+}
+
 // Test region timer aggregation with no match
 func Test_RegionTimerAggregation_NoMatch(t *testing.T) {
 	css := &CustomSummarySettings{

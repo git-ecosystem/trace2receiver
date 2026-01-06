@@ -1,0 +1,46 @@
+# Example custom summary configuration
+# This file demonstrates how to configure custom metrics tracking
+
+# Message pattern rules - count messages matching specific prefixes
+message_patterns:
+  # Count messages starting with "gh_client__queue_oid:"
+  - prefix: "gh_client__queue_oid:"
+    field_name: "queuedCount"
+
+  # Count messages starting with "gh_client__get_immediate:"
+  - prefix: "gh_client__get_immediate:"
+    field_name: "immediateCount"
+
+# Region timer rules - aggregate time spent in regions by category/label
+region_timers:
+  # Track prefetch operations
+  - category: "gh-client"
+    label: "objects/prefetch"
+    count_field: "prefetchCount"
+    time_field: "prefetchTime"
+
+  # Track immediate get operations
+  - category: "gh-client"
+    label: "objects/get"
+    count_field: "getCount"
+    time_field: "getTime"
+
+  # Track batch operations
+  - category: "gvfs-helper"
+    label: "objects/post"
+    count_field: "batchCount"
+    time_field: "batchTime"
+
+# Example output in OTEL span attributes:
+# {
+#   "trace2.process.custom_summary": {
+#     "queuedCount": 405,
+#     "immediateCount": 128,
+#     "prefetchCount": 1,
+#     "prefetchTime": 30.4,
+#     "getCount": 127,
+#     "getTime": 50.3,
+#     "batchCount": 1,
+#     "batchTime": 12.3
+#   }
+# }
