@@ -3,6 +3,7 @@ package trace2receiver
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -316,4 +317,264 @@ func Test_JSONMarshal_Format(t *testing.T) {
 	assert.Equal(t, float64(2), result["queuedCount"])
 	assert.Equal(t, float64(1), result["prefetchCount"])
 	assert.InDelta(t, 30.4, result["prefetchTime"], 0.01)
+}
+
+// Test helper to parse time strings
+func mustParseTime(t *testing.T, timeStr string) time.Time {
+	parsed, err := time.Parse(time.RFC3339, timeStr)
+	if err != nil {
+		t.Fatalf("Failed to parse time %s: %s", timeStr, err.Error())
+	}
+	return parsed
+}
+
+// Test message pattern matching with basic rules
+func Test_MessagePatternMatching_Basic(t *testing.T) {
+	css := &CustomSummarySettings{
+		MessagePatterns: []MessagePatternRule{
+			{Prefix: "gh_client__queue:", FieldName: "queuedCount"},
+			{Prefix: "gh_client__immediate:", FieldName: "immediateCount"},
+		},
+	}
+
+	csa := newCustomSummaryAccumulator()
+
+	// Simulate a fake tr2 dataset with the config
+	tr2 := &trace2Dataset{
+		process: TrProcess{
+			customSummary: csa,
+		},
+	}
+	tr2.rcvr_base = &Rcvr_Base{
+		RcvrConfig: &Config{
+			customSummary: css,
+		},
+	}
+
+	// Test matching messages
+	apply__custom_summary_message(tr2, "gh_client__queue:abc123")
+	apply__custom_summary_message(tr2, "gh_client__queue:def456")
+	apply__custom_summary_message(tr2, "gh_client__immediate:xyz789")
+	apply__custom_summary_message(tr2, "other_message")
+
+	summaryMap := csa.toMap()
+	assert.Equal(t, int64(2), summaryMap["queuedCount"])
+	assert.Equal(t, int64(1), summaryMap["immediateCount"])
+	_, exists := summaryMap["other"]
+	assert.False(t, exists)
+}
+
+// Test message pattern matching with multiple matches
+func Test_MessagePatternMatching_MultipleMatches(t *testing.T) {
+	css := &CustomSummarySettings{
+		MessagePatterns: []MessagePatternRule{
+			{Prefix: "test:", FieldName: "testCount"},
+		},
+	}
+
+	csa := newCustomSummaryAccumulator()
+	tr2 := &trace2Dataset{
+		process: TrProcess{
+			customSummary: csa,
+		},
+	}
+	tr2.rcvr_base = &Rcvr_Base{
+		RcvrConfig: &Config{
+			customSummary: css,
+		},
+	}
+
+	// Multiple matches accumulate
+	for i := 0; i < 10; i++ {
+		apply__custom_summary_message(tr2, "test:message")
+	}
+
+	summaryMap := csa.toMap()
+	assert.Equal(t, int64(10), summaryMap["testCount"])
+}
+
+// Test message pattern matching with no config
+func Test_MessagePatternMatching_NoConfig(t *testing.T) {
+	// When no custom summary config, should not crash
+	tr2 := &trace2Dataset{
+		process: TrProcess{
+			customSummary: nil,
+		},
+	}
+	tr2.rcvr_base = &Rcvr_Base{
+		RcvrConfig: &Config{
+			customSummary: nil,
+		},
+	}
+
+	// Should not crash
+	apply__custom_summary_message(tr2, "test:message")
+}
+
+// Test region timer aggregation with basic rules
+func Test_RegionTimerAggregation_Basic(t *testing.T) {
+	css := &CustomSummarySettings{
+		RegionTimers: []RegionTimerRule{
+			{
+				Category:   "gh-client",
+				Label:      "objects/prefetch",
+				CountField: "prefetchCount",
+				TimeField:  "prefetchTime",
+			},
+		},
+	}
+
+	csa := newCustomSummaryAccumulator()
+	tr2 := &trace2Dataset{
+		process: TrProcess{
+			customSummary: csa,
+		},
+	}
+	tr2.rcvr_base = &Rcvr_Base{
+		RcvrConfig: &Config{
+			customSummary: css,
+		},
+	}
+
+	// Create some test regions
+	r1 := &TrRegion{
+		category: "gh-client",
+		label:    "objects/prefetch",
+	}
+	// Simulate 10 seconds duration
+	r1.lifetime.startTime = mustParseTime(t, "2024-01-01T10:00:00Z")
+	r1.lifetime.endTime = mustParseTime(t, "2024-01-01T10:00:10Z")
+
+	r2 := &TrRegion{
+		category: "gh-client",
+		label:    "objects/prefetch",
+	}
+	// Simulate 5 seconds duration
+	r2.lifetime.startTime = mustParseTime(t, "2024-01-01T10:00:15Z")
+	r2.lifetime.endTime = mustParseTime(t, "2024-01-01T10:00:20Z")
+
+	apply__custom_summary_region(tr2, r1)
+	apply__custom_summary_region(tr2, r2)
+
+	summaryMap := csa.toMap()
+	assert.Equal(t, int64(2), summaryMap["prefetchCount"])
+	assert.InDelta(t, 15.0, summaryMap["prefetchTime"], 0.1)
+}
+
+// Test region timer aggregation with count only
+func Test_RegionTimerAggregation_CountOnly(t *testing.T) {
+	css := &CustomSummarySettings{
+		RegionTimers: []RegionTimerRule{
+			{
+				Category:   "test-cat",
+				Label:      "test-label",
+				CountField: "testCount",
+				TimeField:  "", // No time field
+			},
+		},
+	}
+
+	csa := newCustomSummaryAccumulator()
+	tr2 := &trace2Dataset{
+		process: TrProcess{
+			customSummary: csa,
+		},
+	}
+	tr2.rcvr_base = &Rcvr_Base{
+		RcvrConfig: &Config{
+			customSummary: css,
+		},
+	}
+
+	r := &TrRegion{
+		category: "test-cat",
+		label:    "test-label",
+	}
+	r.lifetime.startTime = mustParseTime(t, "2024-01-01T10:00:00Z")
+	r.lifetime.endTime = mustParseTime(t, "2024-01-01T10:00:10Z")
+
+	apply__custom_summary_region(tr2, r)
+
+	summaryMap := csa.toMap()
+	assert.Equal(t, int64(1), summaryMap["testCount"])
+	_, hasTime := summaryMap["testTime"]
+	assert.False(t, hasTime)
+}
+
+// Test region timer aggregation with time only
+func Test_RegionTimerAggregation_TimeOnly(t *testing.T) {
+	css := &CustomSummarySettings{
+		RegionTimers: []RegionTimerRule{
+			{
+				Category:   "test-cat",
+				Label:      "test-label",
+				CountField: "", // No count field
+				TimeField:  "testTime",
+			},
+		},
+	}
+
+	csa := newCustomSummaryAccumulator()
+	tr2 := &trace2Dataset{
+		process: TrProcess{
+			customSummary: csa,
+		},
+	}
+	tr2.rcvr_base = &Rcvr_Base{
+		RcvrConfig: &Config{
+			customSummary: css,
+		},
+	}
+
+	r := &TrRegion{
+		category: "test-cat",
+		label:    "test-label",
+	}
+	r.lifetime.startTime = mustParseTime(t, "2024-01-01T10:00:00Z")
+	r.lifetime.endTime = mustParseTime(t, "2024-01-01T10:00:10Z")
+
+	apply__custom_summary_region(tr2, r)
+
+	summaryMap := csa.toMap()
+	_, hasCount := summaryMap["testCount"]
+	assert.False(t, hasCount)
+	assert.InDelta(t, 10.0, summaryMap["testTime"], 0.1)
+}
+
+// Test region timer aggregation with no match
+func Test_RegionTimerAggregation_NoMatch(t *testing.T) {
+	css := &CustomSummarySettings{
+		RegionTimers: []RegionTimerRule{
+			{
+				Category:   "gh-client",
+				Label:      "objects/prefetch",
+				CountField: "prefetchCount",
+			},
+		},
+	}
+
+	csa := newCustomSummaryAccumulator()
+	tr2 := &trace2Dataset{
+		process: TrProcess{
+			customSummary: csa,
+		},
+	}
+	tr2.rcvr_base = &Rcvr_Base{
+		RcvrConfig: &Config{
+			customSummary: css,
+		},
+	}
+
+	// Different category/label - should not match
+	r := &TrRegion{
+		category: "other-cat",
+		label:    "other-label",
+	}
+	r.lifetime.startTime = mustParseTime(t, "2024-01-01T10:00:00Z")
+	r.lifetime.endTime = mustParseTime(t, "2024-01-01T10:00:10Z")
+
+	apply__custom_summary_region(tr2, r)
+
+	summaryMap := csa.toMap()
+	assert.Equal(t, 0, len(summaryMap))
 }

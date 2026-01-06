@@ -1,5 +1,7 @@
 package trace2receiver
 
+import "strings"
+
 // CustomSummaryAccumulator stores aggregated custom metric values
 // during trace2 event processing. These values are accumulated as
 // events arrive and then emitted as a single JSON object in the
@@ -91,4 +93,63 @@ func (csa *CustomSummaryAccumulator) toMap() map[string]interface{} {
 	}
 
 	return result
+}
+
+// apply__custom_summary_message checks if a message matches any
+// configured message pattern rules and increments the appropriate
+// counters if matches are found.
+func apply__custom_summary_message(tr2 *trace2Dataset, message string) {
+	// Check if custom summary is enabled
+	if tr2.process.customSummary == nil {
+		return
+	}
+
+	if tr2.rcvr_base == nil || tr2.rcvr_base.RcvrConfig == nil {
+		return
+	}
+
+	css := tr2.rcvr_base.RcvrConfig.customSummary
+	if css == nil {
+		return
+	}
+
+	// Check message against all configured patterns
+	for _, rule := range css.MessagePatterns {
+		if strings.HasPrefix(message, rule.Prefix) {
+			tr2.process.customSummary.incrementMessageCount(rule.FieldName)
+		}
+	}
+}
+
+// apply__custom_summary_region checks if a region matches any
+// configured region timer rules and aggregates the count and/or
+// time if matches are found.
+func apply__custom_summary_region(tr2 *trace2Dataset, region *TrRegion) {
+	// Check if custom summary is enabled
+	if tr2.process.customSummary == nil {
+		return
+	}
+
+	if tr2.rcvr_base == nil || tr2.rcvr_base.RcvrConfig == nil {
+		return
+	}
+
+	css := tr2.rcvr_base.RcvrConfig.customSummary
+	if css == nil {
+		return
+	}
+
+	// Calculate region duration in seconds
+	duration := region.lifetime.endTime.Sub(region.lifetime.startTime).Seconds()
+
+	// Check region against all configured rules
+	for _, rule := range css.RegionTimers {
+		if region.category == rule.Category && region.label == rule.Label {
+			tr2.process.customSummary.addRegionMetrics(
+				rule.CountField,
+				rule.TimeField,
+				duration,
+			)
+		}
+	}
 }

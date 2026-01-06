@@ -129,6 +129,8 @@ type TrProcess struct {
 	// Process-level global counters
 	counters map[string]map[string]int64
 
+	customSummary *CustomSummaryAccumulator
+
 	qualifiedNames QualifiedNames
 }
 
@@ -202,6 +204,11 @@ type TrRegion struct {
 	nestingLevel int64
 	message      string
 
+	// Category and label from the region_enter event, stored for
+	// custom summary matching.
+	category string
+	label    string
+
 	// Collect the values of all region-level "data" and "data_json"
 	// events using a "data[<category>][<key>] = <value>" model.
 	// We assume that Git does not repeat (category,key) pairs, or
@@ -259,6 +266,11 @@ func NewTrace2Dataset(rcvr_base *Rcvr_Base) *trace2Dataset {
 
 	tr2.pii = make(map[string]string)
 	tr2.exec = make(map[int64]*TrExec)
+
+	// Initialize custom summary accumulator if configured
+	if rcvr_base != nil && rcvr_base.RcvrConfig != nil && rcvr_base.RcvrConfig.customSummary != nil {
+		tr2.process.customSummary = configuredCustomSummary(rcvr_base.RcvrConfig.customSummary)
+	}
 
 	return tr2
 }
