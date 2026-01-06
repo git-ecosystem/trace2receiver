@@ -60,6 +60,7 @@ var applymap *ApplyMap = &ApplyMap{
 	"th_timer":     apply__th_timer,
 	"counter":      apply__counter,
 	"th_counter":   apply__th_counter,
+	"printf":       apply__printf,
 	// "too_many_files": nil, // we don't care about this
 }
 
@@ -139,6 +140,12 @@ func apply__error(tr2 *trace2Dataset, evt *TrEvent) (err error) {
 		tr2.process.exeErrorMsg = evt.pm_error.mf_msg
 	}
 
+	return nil
+}
+
+func apply__printf(tr2 *trace2Dataset, evt *TrEvent) (err error) {
+	// The "printf" event contains a "msg" string with the actual error
+	// message that the user would see on the console.
 	return nil
 }
 
