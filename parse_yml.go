@@ -9,7 +9,7 @@ import (
 )
 
 type MyYmlFileTypes interface {
-	RulesetDefinition | FilterSettings | PiiSettings | CustomSummarySettings
+	RulesetDefinition | FilterSettings | PiiSettings | SummarySettings
 }
 
 type MyYmlParseBufferFn[T MyYmlFileTypes] func(data []byte, path string) (*T, error)

@@ -4,10 +4,10 @@ import (
 	"fmt"
 )
 
-// CustomSummarySettings describes the configuration for custom summary
+// SummarySettings describes the configuration for summary
 // metrics that should be aggregated from trace2 events and emitted as
 // a single JSON object in the OTEL process span.
-type CustomSummarySettings struct {
+type SummarySettings struct {
 	MessagePatterns []MessagePatternRule `mapstructure:"message_patterns"`
 	RegionTimers    []RegionTimerRule    `mapstructure:"region_timers"`
 }
@@ -15,19 +15,19 @@ type CustomSummarySettings struct {
 // MessagePatternRule defines a rule for counting messages that match
 // a specific prefix. When a message (from error, data, or other events)
 // starts with the specified prefix, a counter is incremented and emitted
-// in the custom summary using the specified field name.
+// in the summary using the specified field name.
 type MessagePatternRule struct {
 	// Prefix is the string prefix to match at the beginning of messages
 	Prefix string `mapstructure:"prefix"`
 
-	// FieldName is the name of the field in the customSummary object
+	// FieldName is the name of the field in the summary object
 	// where the count will be stored
 	FieldName string `mapstructure:"field_name"`
 }
 
 // RegionTimerRule defines a rule for aggregating time spent in regions
 // that match a specific (category, label) pair. The count and/or total
-// time can be emitted in the custom summary using the specified field names.
+// time can be emitted in the summary using the specified field names.
 type RegionTimerRule struct {
 	// Category is the region category to match (exact match)
 	Category string `mapstructure:"category"`
@@ -35,27 +35,27 @@ type RegionTimerRule struct {
 	// Label is the region label to match (exact match)
 	Label string `mapstructure:"label"`
 
-	// CountField is the optional name of the field in the customSummary
+	// CountField is the optional name of the field in the summary
 	// object where the count of matching regions will be stored.
 	// If empty, count will not be tracked.
 	CountField string `mapstructure:"count_field"`
 
-	// TimeField is the optional name of the field in the customSummary
+	// TimeField is the optional name of the field in the summary
 	// object where the total time (in seconds) will be stored.
 	// If empty, time will not be tracked.
 	TimeField string `mapstructure:"time_field"`
 }
 
-// parseCustomSummarySettings parses a custom summary configuration
+// parseSummarySettings parses a summary configuration
 // from a YML file and validates the configuration.
-func parseCustomSummarySettings(path string) (*CustomSummarySettings, error) {
-	return parseYmlFile[CustomSummarySettings](path, parseCustomSummarySettingsFromBuffer)
+func parseSummarySettings(path string) (*SummarySettings, error) {
+	return parseYmlFile[SummarySettings](path, parseSummarySettingsFromBuffer)
 }
 
-// parseCustomSummarySettingsFromBuffer parses and validates custom
+// parseSummarySettingsFromBuffer parses and validates
 // summary settings from a YAML byte buffer.
-func parseCustomSummarySettingsFromBuffer(data []byte, path string) (*CustomSummarySettings, error) {
-	css, err := parseYmlBuffer[CustomSummarySettings](data, path)
+func parseSummarySettingsFromBuffer(data []byte, path string) (*SummarySettings, error) {
+	css, err := parseYmlBuffer[SummarySettings](data, path)
 	if err != nil {
 		return nil, err
 	}

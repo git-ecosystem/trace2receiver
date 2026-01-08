@@ -9,7 +9,7 @@ import (
 )
 
 // Test that valid settings parse correctly
-func Test_ValidCustomSummarySettings(t *testing.T) {
+func Test_ValidSummarySettings(t *testing.T) {
 	yml := `
 message_patterns:
   - prefix: "error:"
@@ -26,7 +26,7 @@ region_timers:
     label: "prepare"
     count_field: "pack_prepare_count"
 `
-	css, err := parseCustomSummarySettingsFromBuffer([]byte(yml), "test.yml")
+	css, err := parseSummarySettingsFromBuffer([]byte(yml), "test.yml")
 	assert.NoError(t, err)
 	assert.NotNil(t, css)
 	assert.Equal(t, 2, len(css.MessagePatterns))
@@ -40,7 +40,7 @@ message_patterns:
   - prefix: ""
     field_name: "error_count"
 `
-	_, err := parseCustomSummarySettingsFromBuffer([]byte(yml), "test.yml")
+	_, err := parseSummarySettingsFromBuffer([]byte(yml), "test.yml")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "prefix cannot be empty")
 }
@@ -52,7 +52,7 @@ message_patterns:
   - prefix: "error:"
     field_name: ""
 `
-	_, err := parseCustomSummarySettingsFromBuffer([]byte(yml), "test.yml")
+	_, err := parseSummarySettingsFromBuffer([]byte(yml), "test.yml")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "field_name cannot be empty")
 }
@@ -66,7 +66,7 @@ message_patterns:
   - prefix: "warning:"
     field_name: "count"
 `
-	_, err := parseCustomSummarySettingsFromBuffer([]byte(yml), "test.yml")
+	_, err := parseSummarySettingsFromBuffer([]byte(yml), "test.yml")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "duplicate field_name")
 }
@@ -79,7 +79,7 @@ region_timers:
     label: "test"
     count_field: "count"
 `
-	_, err := parseCustomSummarySettingsFromBuffer([]byte(yml), "test.yml")
+	_, err := parseSummarySettingsFromBuffer([]byte(yml), "test.yml")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "category cannot be empty")
 }
@@ -91,7 +91,7 @@ region_timers:
   - category: "index"
     label: "test"
 `
-	_, err := parseCustomSummarySettingsFromBuffer([]byte(yml), "test.yml")
+	_, err := parseSummarySettingsFromBuffer([]byte(yml), "test.yml")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "at least one of count_field or time_field must be specified")
 }
@@ -108,14 +108,14 @@ region_timers:
     label: "test"
     count_field: "count"
 `
-	_, err := parseCustomSummarySettingsFromBuffer([]byte(yml), "test.yml")
+	_, err := parseSummarySettingsFromBuffer([]byte(yml), "test.yml")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "duplicate field_name")
 }
 
 // Test toMap with mixed zero and non-zero values
 func Test_ToMap_MixedValues(t *testing.T) {
-	csa := newCustomSummaryAccumulator()
+	csa := newSummaryAccumulator()
 	csa.incrementMessageCount("msg1")
 	csa.incrementMessageCount("msg1")
 	csa.incrementMessageCount("msg1")
@@ -142,15 +142,15 @@ func Test_ToMap_MixedValues(t *testing.T) {
 
 // Test toMap with empty accumulator
 func Test_ToMap_Empty(t *testing.T) {
-	csa := newCustomSummaryAccumulator()
+	csa := newSummaryAccumulator()
 	result := csa.toMap()
 	assert.Equal(t, 0, len(result))
 }
 
-// Test configuredCustomSummary with empty settings
-func Test_ConfiguredCustomSummary_EmptySettings(t *testing.T) {
-	settings := &CustomSummarySettings{}
-	csa := configuredCustomSummary(settings)
+// Test configuredSummary with empty settings
+func Test_ConfiguredSummary_EmptySettings(t *testing.T) {
+	settings := &SummarySettings{}
+	csa := configuredSummary(settings)
 
 	assert.NotNil(t, csa)
 	assert.Equal(t, 0, len(csa.messageCounts))
@@ -158,15 +158,15 @@ func Test_ConfiguredCustomSummary_EmptySettings(t *testing.T) {
 	assert.Equal(t, 0, len(csa.regionTimes))
 }
 
-// Test configuredCustomSummary with only message patterns
-func Test_ConfiguredCustomSummary_MessagePatternsOnly(t *testing.T) {
-	settings := &CustomSummarySettings{
+// Test configuredSummary with only message patterns
+func Test_ConfiguredSummary_MessagePatternsOnly(t *testing.T) {
+	settings := &SummarySettings{
 		MessagePatterns: []MessagePatternRule{
 			{Prefix: "error:", FieldName: "error_count"},
 			{Prefix: "warning:", FieldName: "warning_count"},
 		},
 	}
-	csa := configuredCustomSummary(settings)
+	csa := configuredSummary(settings)
 
 	assert.NotNil(t, csa)
 	assert.Equal(t, 2, len(csa.messageCounts))
@@ -176,15 +176,15 @@ func Test_ConfiguredCustomSummary_MessagePatternsOnly(t *testing.T) {
 	assert.Equal(t, 0, len(csa.regionTimes))
 }
 
-// Test configuredCustomSummary with region timers having only count field
-func Test_ConfiguredCustomSummary_RegionTimers_CountOnly(t *testing.T) {
-	settings := &CustomSummarySettings{
+// Test configuredSummary with region timers having only count field
+func Test_ConfiguredSummary_RegionTimers_CountOnly(t *testing.T) {
+	settings := &SummarySettings{
 		RegionTimers: []RegionTimerRule{
 			{Category: "index", Label: "read", CountField: "index_read_count"},
 			{Category: "pack", Label: "prepare", CountField: "pack_prepare_count"},
 		},
 	}
-	csa := configuredCustomSummary(settings)
+	csa := configuredSummary(settings)
 
 	assert.NotNil(t, csa)
 	assert.Equal(t, 0, len(csa.messageCounts))
@@ -194,15 +194,15 @@ func Test_ConfiguredCustomSummary_RegionTimers_CountOnly(t *testing.T) {
 	assert.Equal(t, 0, len(csa.regionTimes))
 }
 
-// Test configuredCustomSummary with region timers having only time field
-func Test_ConfiguredCustomSummary_RegionTimers_TimeOnly(t *testing.T) {
-	settings := &CustomSummarySettings{
+// Test configuredSummary with region timers having only time field
+func Test_ConfiguredSummary_RegionTimers_TimeOnly(t *testing.T) {
+	settings := &SummarySettings{
 		RegionTimers: []RegionTimerRule{
 			{Category: "index", Label: "read", TimeField: "index_read_time"},
 			{Category: "pack", Label: "prepare", TimeField: "pack_prepare_time"},
 		},
 	}
-	csa := configuredCustomSummary(settings)
+	csa := configuredSummary(settings)
 
 	assert.NotNil(t, csa)
 	assert.Equal(t, 0, len(csa.messageCounts))
@@ -212,9 +212,9 @@ func Test_ConfiguredCustomSummary_RegionTimers_TimeOnly(t *testing.T) {
 	assert.Equal(t, 0.0, csa.regionTimes["pack_prepare_time"])
 }
 
-// Test configuredCustomSummary with region timers having both count and time fields
-func Test_ConfiguredCustomSummary_RegionTimers_BothFields(t *testing.T) {
-	settings := &CustomSummarySettings{
+// Test configuredSummary with region timers having both count and time fields
+func Test_ConfiguredSummary_RegionTimers_BothFields(t *testing.T) {
+	settings := &SummarySettings{
 		RegionTimers: []RegionTimerRule{
 			{
 				Category:   "index",
@@ -224,7 +224,7 @@ func Test_ConfiguredCustomSummary_RegionTimers_BothFields(t *testing.T) {
 			},
 		},
 	}
-	csa := configuredCustomSummary(settings)
+	csa := configuredSummary(settings)
 
 	assert.NotNil(t, csa)
 	assert.Equal(t, 0, len(csa.messageCounts))
@@ -234,9 +234,9 @@ func Test_ConfiguredCustomSummary_RegionTimers_BothFields(t *testing.T) {
 	assert.Equal(t, 0.0, csa.regionTimes["index_read_time"])
 }
 
-// Test configuredCustomSummary with empty count/time field strings
-func Test_ConfiguredCustomSummary_RegionTimers_EmptyFields(t *testing.T) {
-	settings := &CustomSummarySettings{
+// Test configuredSummary with empty count/time field strings
+func Test_ConfiguredSummary_RegionTimers_EmptyFields(t *testing.T) {
+	settings := &SummarySettings{
 		RegionTimers: []RegionTimerRule{
 			{
 				Category:   "index",
@@ -252,7 +252,7 @@ func Test_ConfiguredCustomSummary_RegionTimers_EmptyFields(t *testing.T) {
 			},
 		},
 	}
-	csa := configuredCustomSummary(settings)
+	csa := configuredSummary(settings)
 
 	assert.NotNil(t, csa)
 	assert.Equal(t, 0, len(csa.messageCounts))
@@ -262,9 +262,9 @@ func Test_ConfiguredCustomSummary_RegionTimers_EmptyFields(t *testing.T) {
 	assert.Equal(t, 0.0, csa.regionTimes["index_read_time"])
 }
 
-// Test configuredCustomSummary with mixed message patterns and region timers
-func Test_ConfiguredCustomSummary_Mixed(t *testing.T) {
-	settings := &CustomSummarySettings{
+// Test configuredSummary with mixed message patterns and region timers
+func Test_ConfiguredSummary_Mixed(t *testing.T) {
+	settings := &SummarySettings{
 		MessagePatterns: []MessagePatternRule{
 			{Prefix: "error:", FieldName: "error_count"},
 			{Prefix: "warning:", FieldName: "warning_count"},
@@ -283,7 +283,7 @@ func Test_ConfiguredCustomSummary_Mixed(t *testing.T) {
 			},
 		},
 	}
-	csa := configuredCustomSummary(settings)
+	csa := configuredSummary(settings)
 
 	assert.NotNil(t, csa)
 	// Check message counts
@@ -301,7 +301,7 @@ func Test_ConfiguredCustomSummary_Mixed(t *testing.T) {
 
 // Test JSON marshaling format
 func Test_JSONMarshal_Format(t *testing.T) {
-	csa := newCustomSummaryAccumulator()
+	csa := newSummaryAccumulator()
 	csa.incrementMessageCount("queuedCount")
 	csa.incrementMessageCount("queuedCount")
 	csa.addRegionMetrics("prefetchCount", "prefetchTime", 30.4)
@@ -330,32 +330,32 @@ func mustParseTime(t *testing.T, timeStr string) time.Time {
 
 // Test message pattern matching with basic rules
 func Test_MessagePatternMatching_Basic(t *testing.T) {
-	css := &CustomSummarySettings{
+	css := &SummarySettings{
 		MessagePatterns: []MessagePatternRule{
 			{Prefix: "gh_client__queue:", FieldName: "queuedCount"},
 			{Prefix: "gh_client__immediate:", FieldName: "immediateCount"},
 		},
 	}
 
-	csa := newCustomSummaryAccumulator()
+	csa := newSummaryAccumulator()
 
 	// Simulate a fake tr2 dataset with the config
 	tr2 := &trace2Dataset{
 		process: TrProcess{
-			customSummary: csa,
+			summary: csa,
 		},
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			customSummary: css,
+			summary: css,
 		},
 	}
 
 	// Test matching messages
-	apply__custom_summary_message(tr2, "gh_client__queue:abc123")
-	apply__custom_summary_message(tr2, "gh_client__queue:def456")
-	apply__custom_summary_message(tr2, "gh_client__immediate:xyz789")
-	apply__custom_summary_message(tr2, "other_message")
+	apply__summary_message(tr2, "gh_client__queue:abc123")
+	apply__summary_message(tr2, "gh_client__queue:def456")
+	apply__summary_message(tr2, "gh_client__immediate:xyz789")
+	apply__summary_message(tr2, "other_message")
 
 	summaryMap := csa.toMap()
 	assert.Equal(t, int64(2), summaryMap["queuedCount"])
@@ -366,27 +366,27 @@ func Test_MessagePatternMatching_Basic(t *testing.T) {
 
 // Test message pattern matching with multiple matches
 func Test_MessagePatternMatching_MultipleMatches(t *testing.T) {
-	css := &CustomSummarySettings{
+	css := &SummarySettings{
 		MessagePatterns: []MessagePatternRule{
 			{Prefix: "test:", FieldName: "testCount"},
 		},
 	}
 
-	csa := newCustomSummaryAccumulator()
+	csa := newSummaryAccumulator()
 	tr2 := &trace2Dataset{
 		process: TrProcess{
-			customSummary: csa,
+			summary: csa,
 		},
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			customSummary: css,
+			summary: css,
 		},
 	}
 
 	// Multiple matches accumulate
 	for i := 0; i < 10; i++ {
-		apply__custom_summary_message(tr2, "test:message")
+		apply__summary_message(tr2, "test:message")
 	}
 
 	summaryMap := csa.toMap()
@@ -395,25 +395,25 @@ func Test_MessagePatternMatching_MultipleMatches(t *testing.T) {
 
 // Test message pattern matching with no config
 func Test_MessagePatternMatching_NoConfig(t *testing.T) {
-	// When no custom summary config, should not crash
+	// When no summary config, should not crash
 	tr2 := &trace2Dataset{
 		process: TrProcess{
-			customSummary: nil,
+			summary: nil,
 		},
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			customSummary: nil,
+			summary: nil,
 		},
 	}
 
 	// Should not crash
-	apply__custom_summary_message(tr2, "test:message")
+	apply__summary_message(tr2, "test:message")
 }
 
 // Test region timer aggregation with basic rules
 func Test_RegionTimerAggregation_Basic(t *testing.T) {
-	css := &CustomSummarySettings{
+	css := &SummarySettings{
 		RegionTimers: []RegionTimerRule{
 			{
 				Category:   "gh-client",
@@ -424,15 +424,15 @@ func Test_RegionTimerAggregation_Basic(t *testing.T) {
 		},
 	}
 
-	csa := newCustomSummaryAccumulator()
+	csa := newSummaryAccumulator()
 	tr2 := &trace2Dataset{
 		process: TrProcess{
-			customSummary: csa,
+			summary: csa,
 		},
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			customSummary: css,
+			summary: css,
 		},
 	}
 
@@ -453,8 +453,8 @@ func Test_RegionTimerAggregation_Basic(t *testing.T) {
 	r2.lifetime.startTime = mustParseTime(t, "2024-01-01T10:00:15Z")
 	r2.lifetime.endTime = mustParseTime(t, "2024-01-01T10:00:20Z")
 
-	apply__custom_summary_region(tr2, r1)
-	apply__custom_summary_region(tr2, r2)
+	apply__summary_region(tr2, r1)
+	apply__summary_region(tr2, r2)
 
 	summaryMap := csa.toMap()
 	assert.Equal(t, int64(2), summaryMap["prefetchCount"])
@@ -463,7 +463,7 @@ func Test_RegionTimerAggregation_Basic(t *testing.T) {
 
 // Test region timer aggregation with count only
 func Test_RegionTimerAggregation_CountOnly(t *testing.T) {
-	css := &CustomSummarySettings{
+	css := &SummarySettings{
 		RegionTimers: []RegionTimerRule{
 			{
 				Category:   "test-cat",
@@ -474,15 +474,15 @@ func Test_RegionTimerAggregation_CountOnly(t *testing.T) {
 		},
 	}
 
-	csa := newCustomSummaryAccumulator()
+	csa := newSummaryAccumulator()
 	tr2 := &trace2Dataset{
 		process: TrProcess{
-			customSummary: csa,
+			summary: csa,
 		},
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			customSummary: css,
+			summary: css,
 		},
 	}
 
@@ -493,7 +493,7 @@ func Test_RegionTimerAggregation_CountOnly(t *testing.T) {
 	r.lifetime.startTime = mustParseTime(t, "2024-01-01T10:00:00Z")
 	r.lifetime.endTime = mustParseTime(t, "2024-01-01T10:00:10Z")
 
-	apply__custom_summary_region(tr2, r)
+	apply__summary_region(tr2, r)
 
 	summaryMap := csa.toMap()
 	assert.Equal(t, int64(1), summaryMap["testCount"])
@@ -503,7 +503,7 @@ func Test_RegionTimerAggregation_CountOnly(t *testing.T) {
 
 // Test region timer aggregation with time only
 func Test_RegionTimerAggregation_TimeOnly(t *testing.T) {
-	css := &CustomSummarySettings{
+	css := &SummarySettings{
 		RegionTimers: []RegionTimerRule{
 			{
 				Category:   "test-cat",
@@ -514,15 +514,15 @@ func Test_RegionTimerAggregation_TimeOnly(t *testing.T) {
 		},
 	}
 
-	csa := newCustomSummaryAccumulator()
+	csa := newSummaryAccumulator()
 	tr2 := &trace2Dataset{
 		process: TrProcess{
-			customSummary: csa,
+			summary: csa,
 		},
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			customSummary: css,
+			summary: css,
 		},
 	}
 
@@ -533,7 +533,7 @@ func Test_RegionTimerAggregation_TimeOnly(t *testing.T) {
 	r.lifetime.startTime = mustParseTime(t, "2024-01-01T10:00:00Z")
 	r.lifetime.endTime = mustParseTime(t, "2024-01-01T10:00:10Z")
 
-	apply__custom_summary_region(tr2, r)
+	apply__summary_region(tr2, r)
 
 	summaryMap := csa.toMap()
 	_, hasCount := summaryMap["testCount"]
@@ -541,11 +541,11 @@ func Test_RegionTimerAggregation_TimeOnly(t *testing.T) {
 	assert.InDelta(t, 10.0, summaryMap["testTime"], 0.1)
 }
 
-// Test that custom summary is emitted at dl:summary level
-func Test_CustomSummary_EmittedAtSummaryLevel(t *testing.T) {
-	// Create a minimal config with custom summary
+// Test that summary is emitted at dl:summary level
+func Test_Summary_EmittedAtSummaryLevel(t *testing.T) {
+	// Create a minimal config with summary
 	cfg := &Config{
-		customSummary: &CustomSummarySettings{
+		summary: &SummarySettings{
 			MessagePatterns: []MessagePatternRule{
 				{Prefix: "test_msg:", FieldName: "msgCount"},
 			},
@@ -557,14 +557,14 @@ func Test_CustomSummary_EmittedAtSummaryLevel(t *testing.T) {
 		RcvrConfig: cfg,
 	}
 
-	// Create a trace2 dataset with custom summary
+	// Create a trace2 dataset with summary
 	tr2 := NewTrace2Dataset(rcvr)
 
-	// Manually initialize process to have custom summary
-	if tr2.process.customSummary != nil {
-		tr2.process.customSummary.incrementMessageCount("msgCount")
+	// Manually initialize process to have summary
+	if tr2.process.summary != nil {
+		tr2.process.summary.incrementMessageCount("msgCount")
 	} else {
-		t.Fatal("customSummary should be initialized")
+		t.Fatal("summary should be initialized")
 	}
 
 	// Set up minimal process data for trace emission
@@ -582,22 +582,22 @@ func Test_CustomSummary_EmittedAtSummaryLevel(t *testing.T) {
 	ss := rs.ScopeSpans().At(0)
 	assert.Greater(t, ss.Spans().Len(), 0)
 
-	// Find the process span and check for custom summary
+	// Find the process span and check for summary
 	processSpan := ss.Spans().At(0)
 	attrs := processSpan.Attributes()
 
-	customSummaryVal, found := attrs.Get("trace2.process.custom_summary")
-	assert.True(t, found, "custom_summary should be present at dl:summary level")
+	summaryVal, found := attrs.Get("trace2.process.summary")
+	assert.True(t, found, "summary should be present at dl:summary level")
 
 	// Verify the JSON contains our count
-	jsonStr := customSummaryVal.Str()
+	jsonStr := summaryVal.Str()
 	assert.Contains(t, jsonStr, "msgCount")
 	assert.Contains(t, jsonStr, "1")
 }
 
 // Test region timer aggregation with no match
 func Test_RegionTimerAggregation_NoMatch(t *testing.T) {
-	css := &CustomSummarySettings{
+	css := &SummarySettings{
 		RegionTimers: []RegionTimerRule{
 			{
 				Category:   "gh-client",
@@ -607,15 +607,15 @@ func Test_RegionTimerAggregation_NoMatch(t *testing.T) {
 		},
 	}
 
-	csa := newCustomSummaryAccumulator()
+	csa := newSummaryAccumulator()
 	tr2 := &trace2Dataset{
 		process: TrProcess{
-			customSummary: csa,
+			summary: csa,
 		},
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			customSummary: css,
+			summary: css,
 		},
 	}
 
@@ -627,7 +627,7 @@ func Test_RegionTimerAggregation_NoMatch(t *testing.T) {
 	r.lifetime.startTime = mustParseTime(t, "2024-01-01T10:00:00Z")
 	r.lifetime.endTime = mustParseTime(t, "2024-01-01T10:00:10Z")
 
-	apply__custom_summary_region(tr2, r)
+	apply__summary_region(tr2, r)
 
 	summaryMap := csa.toMap()
 	assert.Equal(t, 0, len(summaryMap))

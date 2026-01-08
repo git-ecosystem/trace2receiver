@@ -277,10 +277,10 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset, dl FilterDetailLevel
 		}
 	}
 
-	// Emit custom summary regardless of detail level since it's user-configured
+	// Emit summary regardless of detail level since it's user-configured
 	// and opt-in (not generic noise like all process timers/counters)
-	if tr2.process.customSummary != nil {
-		summaryMap := tr2.process.customSummary.toMap()
+	if tr2.process.summary != nil {
+		summaryMap := tr2.process.summary.toMap()
 		if len(summaryMap) > 0 {
 			jargs, _ := json.Marshal(summaryMap)
 			sm.PutStr(string(Trace2ProcessCustom), string(jargs))

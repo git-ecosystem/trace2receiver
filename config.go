@@ -53,9 +53,9 @@ type Config struct {
 	FilterSettingsPath string `mapstructure:"filter"`
 	filterSettings     *FilterSettings
 
-	// Pathname to YML file containing custom summary settings.
-	CustomSummaryPath string `mapstructure:"custom_summary"`
-	customSummary     *CustomSummarySettings
+	// Pathname to YML file containing summary settings.
+	SummaryPath string `mapstructure:"summary"`
+	summary     *SummarySettings
 }
 
 // `Validate()` checks if the receiver configuration is valid.
@@ -115,8 +115,8 @@ func (cfg *Config) Validate() error {
 		}
 	}
 
-	if len(cfg.CustomSummaryPath) > 0 {
-		cfg.customSummary, err = parseCustomSummarySettings(cfg.CustomSummaryPath)
+	if len(cfg.SummaryPath) > 0 {
+		cfg.summary, err = parseSummarySettings(cfg.SummaryPath)
 		if err != nil {
 			return err
 		}

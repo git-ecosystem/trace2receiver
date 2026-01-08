@@ -2,11 +2,11 @@ package trace2receiver
 
 import "strings"
 
-// CustomSummaryAccumulator stores aggregated custom metric values
+// SummaryAccumulator stores aggregated metric values
 // during trace2 event processing. These values are accumulated as
 // events arrive and then emitted as a single JSON object in the
 // process span.
-type CustomSummaryAccumulator struct {
+type SummaryAccumulator struct {
 	// messageCounts maps field names to message count values
 	messageCounts map[string]int64
 
@@ -17,20 +17,20 @@ type CustomSummaryAccumulator struct {
 	regionTimes map[string]float64
 }
 
-// newCustomSummaryAccumulator creates a new accumulator with
+// newSummaryAccumulator creates a new accumulator with
 // initialized maps.
-func newCustomSummaryAccumulator() *CustomSummaryAccumulator {
-	return &CustomSummaryAccumulator{
+func newSummaryAccumulator() *SummaryAccumulator {
+	return &SummaryAccumulator{
 		messageCounts: make(map[string]int64),
 		regionCounts:  make(map[string]int64),
 		regionTimes:   make(map[string]float64),
 	}
 }
 
-// configuredCustomSummary creates an accumulator initialized with
+// configuredSummary creates an accumulator initialized with
 // field names from the settings, all set to zero values.
-func configuredCustomSummary(settings *CustomSummarySettings) *CustomSummaryAccumulator {
-	summary := newCustomSummaryAccumulator()
+func configuredSummary(settings *SummarySettings) *SummaryAccumulator {
+	summary := newSummaryAccumulator()
 
 	// Initialize messageCounts with field names from MessagePatterns
 	for _, rule := range settings.MessagePatterns {
@@ -52,14 +52,14 @@ func configuredCustomSummary(settings *CustomSummarySettings) *CustomSummaryAccu
 
 // incrementMessageCount increments the count for a specific field name
 // by 1. This is called when a message matches a configured prefix pattern.
-func (csa *CustomSummaryAccumulator) incrementMessageCount(fieldName string) {
+func (csa *SummaryAccumulator) incrementMessageCount(fieldName string) {
 	csa.messageCounts[fieldName]++
 }
 
 // addRegionMetrics adds metrics for a matching region. If countField
 // is non-empty, increments the count. If timeField is non-empty, adds
 // the duration to the total time.
-func (csa *CustomSummaryAccumulator) addRegionMetrics(countField string, timeField string, duration float64) {
+func (csa *SummaryAccumulator) addRegionMetrics(countField string, timeField string, duration float64) {
 	if len(countField) > 0 {
 		csa.regionCounts[countField]++
 	}
@@ -71,7 +71,7 @@ func (csa *CustomSummaryAccumulator) addRegionMetrics(countField string, timeFie
 // toMap converts the accumulated metrics into a single map suitable
 // for JSON marshaling. The map contains all non-zero values across
 // all metric types (message counts, region counts, region times).
-func (csa *CustomSummaryAccumulator) toMap() map[string]interface{} {
+func (csa *SummaryAccumulator) toMap() map[string]interface{} {
 	result := make(map[string]interface{})
 
 	for fieldName, count := range csa.messageCounts {
@@ -95,12 +95,12 @@ func (csa *CustomSummaryAccumulator) toMap() map[string]interface{} {
 	return result
 }
 
-// apply__custom_summary_message checks if a message matches any
+// apply__summary_message checks if a message matches any
 // configured message pattern rules and increments the appropriate
 // counters if matches are found.
-func apply__custom_summary_message(tr2 *trace2Dataset, message string) {
-	// Check if custom summary is enabled
-	if tr2.process.customSummary == nil {
+func apply__summary_message(tr2 *trace2Dataset, message string) {
+	// Check if summary is enabled
+	if tr2.process.summary == nil {
 		return
 	}
 
@@ -108,7 +108,7 @@ func apply__custom_summary_message(tr2 *trace2Dataset, message string) {
 		return
 	}
 
-	css := tr2.rcvr_base.RcvrConfig.customSummary
+	css := tr2.rcvr_base.RcvrConfig.summary
 	if css == nil {
 		return
 	}
@@ -116,17 +116,17 @@ func apply__custom_summary_message(tr2 *trace2Dataset, message string) {
 	// Check message against all configured patterns
 	for _, rule := range css.MessagePatterns {
 		if strings.HasPrefix(message, rule.Prefix) {
-			tr2.process.customSummary.incrementMessageCount(rule.FieldName)
+			tr2.process.summary.incrementMessageCount(rule.FieldName)
 		}
 	}
 }
 
-// apply__custom_summary_region checks if a region matches any
+// apply__summary_region checks if a region matches any
 // configured region timer rules and aggregates the count and/or
 // time if matches are found.
-func apply__custom_summary_region(tr2 *trace2Dataset, region *TrRegion) {
-	// Check if custom summary is enabled
-	if tr2.process.customSummary == nil {
+func apply__summary_region(tr2 *trace2Dataset, region *TrRegion) {
+	// Check if summary is enabled
+	if tr2.process.summary == nil {
 		return
 	}
 
@@ -134,7 +134,7 @@ func apply__custom_summary_region(tr2 *trace2Dataset, region *TrRegion) {
 		return
 	}
 
-	css := tr2.rcvr_base.RcvrConfig.customSummary
+	css := tr2.rcvr_base.RcvrConfig.summary
 	if css == nil {
 		return
 	}
@@ -145,7 +145,7 @@ func apply__custom_summary_region(tr2 *trace2Dataset, region *TrRegion) {
 	// Check region against all configured rules
 	for _, rule := range css.RegionTimers {
 		if region.category == rule.Category && region.label == rule.Label {
-			tr2.process.customSummary.addRegionMetrics(
+			tr2.process.summary.addRegionMetrics(
 				rule.CountField,
 				rule.TimeField,
 				duration,

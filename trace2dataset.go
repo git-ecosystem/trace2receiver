@@ -129,7 +129,7 @@ type TrProcess struct {
 	// Process-level global counters
 	counters map[string]map[string]int64
 
-	customSummary *CustomSummaryAccumulator
+	summary *SummaryAccumulator
 
 	qualifiedNames QualifiedNames
 }
@@ -205,7 +205,7 @@ type TrRegion struct {
 	message      string
 
 	// Category and label from the region_enter event, stored for
-	// custom summary matching.
+	// summary matching.
 	category string
 	label    string
 
@@ -267,9 +267,9 @@ func NewTrace2Dataset(rcvr_base *Rcvr_Base) *trace2Dataset {
 	tr2.pii = make(map[string]string)
 	tr2.exec = make(map[int64]*TrExec)
 
-	// Initialize custom summary accumulator if configured
-	if rcvr_base != nil && rcvr_base.RcvrConfig != nil && rcvr_base.RcvrConfig.customSummary != nil {
-		tr2.process.customSummary = configuredCustomSummary(rcvr_base.RcvrConfig.customSummary)
+	// Initialize summary accumulator if configured
+	if rcvr_base != nil && rcvr_base.RcvrConfig != nil && rcvr_base.RcvrConfig.summary != nil {
+		tr2.process.summary = configuredSummary(rcvr_base.RcvrConfig.summary)
 	}
 
 	return tr2

@@ -140,8 +140,8 @@ func apply__error(tr2 *trace2Dataset, evt *TrEvent) (err error) {
 		tr2.process.exeErrorMsg = evt.pm_error.mf_msg
 	}
 
-	// Check for custom summary message pattern matches
-	apply__custom_summary_message(tr2, evt.pm_error.mf_msg)
+	// Check for summary message pattern matches
+	apply__summary_message(tr2, evt.pm_error.mf_msg)
 
 	return nil
 }
@@ -150,8 +150,8 @@ func apply__printf(tr2 *trace2Dataset, evt *TrEvent) (err error) {
 	// The "printf" event contains a "msg" string with the actual error
 	// message that the user would see on the console.
 
-	// Check for custom summary message pattern matches
-	apply__custom_summary_message(tr2, evt.pm_printf.mf_msg)
+	// Check for summary message pattern matches
+	apply__summary_message(tr2, evt.pm_printf.mf_msg)
 
 	return nil
 }
@@ -694,7 +694,7 @@ func apply__region_enter(tr2 *trace2Dataset, evt *TrEvent) (err error) {
 		r.message = *evt.pm_region_enter.pmf_msg
 	}
 
-	// Store category and label for custom summary matching
+	// Store category and label for summary matching
 	if evt.pm_region_enter.pmf_category != nil {
 		r.category = *evt.pm_region_enter.pmf_category
 	}
@@ -797,8 +797,8 @@ func apply__region_leave(tr2 *trace2Dataset, evt *TrEvent) (err error) {
 
 	r.lifetime.endTime = evt.mf_time
 
-	// Apply custom summary region rules
-	apply__custom_summary_region(tr2, r)
+	// Apply summary region rules
+	apply__summary_region(tr2, r)
 
 	// TODO The region-leave event has optional category and label fields.
 	// These almost always match the values on the region-enter, but they

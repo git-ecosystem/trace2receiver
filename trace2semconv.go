@@ -104,7 +104,7 @@ const (
 	Trace2ProcessData     = attribute.Key("trace2.process.data")
 	Trace2ProcessTimers   = attribute.Key("trace2.process.timers")
 	Trace2ProcessCounters = attribute.Key("trace2.process.counters")
-	Trace2ProcessCustom   = attribute.Key("trace2.process.custom_summary")
+	Trace2ProcessCustom   = attribute.Key("trace2.process.summary")
 
 	Trace2ThreadTimers   = attribute.Key("trace2.thread.timers")
 	Trace2ThreadCounters = attribute.Key("trace2.thread.counters")

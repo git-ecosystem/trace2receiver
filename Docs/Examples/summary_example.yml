@@ -1,5 +1,5 @@
-# Example custom summary configuration
-# This file demonstrates how to configure custom metrics tracking
+# Example summary configuration
+# This file demonstrates how to configure summary metrics tracking
 
 # Message pattern rules - count messages matching specific prefixes
 message_patterns:
@@ -33,7 +33,7 @@ region_timers:
 
 # Example output in OTEL span attributes:
 # {
-#   "trace2.process.custom_summary": {
+#   "trace2.process.summary": {
 #     "queuedCount": 405,
 #     "immediateCount": 128,
 #     "prefetchCount": 1,

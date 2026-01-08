@@ -215,12 +215,12 @@ func Test_Config_Validate_WithInvalidFilterSettings(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// Test Validate with valid custom summary settings file
-func Test_Config_Validate_WithValidCustomSummary(t *testing.T) {
-	// Create a temporary custom summary settings file
+// Test Validate with valid summary settings file
+func Test_Config_Validate_WithValidSummary(t *testing.T) {
+	// Create a temporary summary settings file
 	tmpDir := t.TempDir()
-	customSummaryPath := filepath.Join(tmpDir, "custom_summary.yml")
-	customSummaryContent := `
+	summaryPath := filepath.Join(tmpDir, "custom_summary.yml")
+	summaryContent := `
 message_patterns:
   - prefix: "error:"
     field_name: "error_count"
@@ -233,66 +233,66 @@ region_timers:
     count_field: "index_read_count"
     time_field: "index_read_time"
 `
-	err := os.WriteFile(customSummaryPath, []byte(customSummaryContent), 0644)
+	err := os.WriteFile(summaryPath, []byte(summaryContent), 0644)
 	require.NoError(t, err)
 
 	cfg := createMinimalValidConfig()
-	cfg.CustomSummaryPath = customSummaryPath
+	cfg.SummaryPath = summaryPath
 
 	err = cfg.Validate()
 	assert.NoError(t, err)
-	assert.NotNil(t, cfg.customSummary)
-	assert.Equal(t, 2, len(cfg.customSummary.MessagePatterns))
-	assert.Equal(t, 1, len(cfg.customSummary.RegionTimers))
+	assert.NotNil(t, cfg.summary)
+	assert.Equal(t, 2, len(cfg.summary.MessagePatterns))
+	assert.Equal(t, 1, len(cfg.summary.RegionTimers))
 }
 
-// Test Validate with invalid custom summary settings file (nonexistent)
-func Test_Config_Validate_WithNonexistentCustomSummary(t *testing.T) {
+// Test Validate with invalid summary settings file (nonexistent)
+func Test_Config_Validate_WithNonexistentSummary(t *testing.T) {
 	cfg := createMinimalValidConfig()
-	cfg.CustomSummaryPath = "/nonexistent/custom_summary.yml"
+	cfg.SummaryPath = "/nonexistent/custom_summary.yml"
 
 	err := cfg.Validate()
 	assert.Error(t, err)
 }
 
-// Test Validate with invalid custom summary settings file (malformed YAML)
-func Test_Config_Validate_WithMalformedCustomSummary(t *testing.T) {
-	// Create a temporary malformed custom summary settings file
+// Test Validate with invalid summary settings file (malformed YAML)
+func Test_Config_Validate_WithMalformedSummary(t *testing.T) {
+	// Create a temporary malformed summary settings file
 	tmpDir := t.TempDir()
-	customSummaryPath := filepath.Join(tmpDir, "custom_summary.yml")
-	customSummaryContent := `
+	summaryPath := filepath.Join(tmpDir, "custom_summary.yml")
+	summaryContent := `
 message_patterns:
   - prefix: "error:"
     field_name: ""
 `
-	err := os.WriteFile(customSummaryPath, []byte(customSummaryContent), 0644)
+	err := os.WriteFile(summaryPath, []byte(summaryContent), 0644)
 	require.NoError(t, err)
 
 	cfg := createMinimalValidConfig()
-	cfg.CustomSummaryPath = customSummaryPath
+	cfg.SummaryPath = summaryPath
 
 	err = cfg.Validate()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "field_name cannot be empty")
 }
 
-// Test Validate with custom summary settings with duplicate field names
-func Test_Config_Validate_WithDuplicateCustomSummaryFields(t *testing.T) {
-	// Create a temporary custom summary settings file with duplicate fields
+// Test Validate with summary settings with duplicate field names
+func Test_Config_Validate_WithDuplicateSummaryFields(t *testing.T) {
+	// Create a temporary summary settings file with duplicate fields
 	tmpDir := t.TempDir()
-	customSummaryPath := filepath.Join(tmpDir, "custom_summary.yml")
-	customSummaryContent := `
+	summaryPath := filepath.Join(tmpDir, "custom_summary.yml")
+	summaryContent := `
 message_patterns:
   - prefix: "error:"
     field_name: "count"
   - prefix: "warning:"
     field_name: "count"
 `
-	err := os.WriteFile(customSummaryPath, []byte(customSummaryContent), 0644)
+	err := os.WriteFile(summaryPath, []byte(summaryContent), 0644)
 	require.NoError(t, err)
 
 	cfg := createMinimalValidConfig()
-	cfg.CustomSummaryPath = customSummaryPath
+	cfg.SummaryPath = summaryPath
 
 	err = cfg.Validate()
 	assert.Error(t, err)
@@ -321,8 +321,8 @@ default_action: accept
 	err = os.WriteFile(filterPath, []byte(filterContent), 0644)
 	require.NoError(t, err)
 
-	customSummaryPath := filepath.Join(tmpDir, "custom_summary.yml")
-	customSummaryContent := `
+	summaryPath := filepath.Join(tmpDir, "custom_summary.yml")
+	summaryContent := `
 message_patterns:
   - prefix: "error:"
     field_name: "error_count"
@@ -332,19 +332,19 @@ region_timers:
     label: "do_read_index"
     time_field: "index_read_time"
 `
-	err = os.WriteFile(customSummaryPath, []byte(customSummaryContent), 0644)
+	err = os.WriteFile(summaryPath, []byte(summaryContent), 0644)
 	require.NoError(t, err)
 
 	cfg := createMinimalValidConfig()
 	cfg.PiiSettingsPath = piiPath
 	cfg.FilterSettingsPath = filterPath
-	cfg.CustomSummaryPath = customSummaryPath
+	cfg.SummaryPath = summaryPath
 
 	err = cfg.Validate()
 	assert.NoError(t, err)
 	assert.NotNil(t, cfg.piiSettings)
 	assert.NotNil(t, cfg.filterSettings)
-	assert.NotNil(t, cfg.customSummary)
+	assert.NotNil(t, cfg.summary)
 }
 
 // Test Validate with command control enabled
