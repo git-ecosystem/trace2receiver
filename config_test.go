@@ -219,7 +219,7 @@ func Test_Config_Validate_WithInvalidFilterSettings(t *testing.T) {
 func Test_Config_Validate_WithValidSummary(t *testing.T) {
 	// Create a temporary summary settings file
 	tmpDir := t.TempDir()
-	summaryPath := filepath.Join(tmpDir, "custom_summary.yml")
+	summaryPath := filepath.Join(tmpDir, "summary.yml")
 	summaryContent := `
 message_patterns:
   - prefix: "error:"
@@ -249,7 +249,7 @@ region_timers:
 // Test Validate with invalid summary settings file (nonexistent)
 func Test_Config_Validate_WithNonexistentSummary(t *testing.T) {
 	cfg := createMinimalValidConfig()
-	cfg.SummaryPath = "/nonexistent/custom_summary.yml"
+	cfg.SummaryPath = "/nonexistent/summary.yml"
 
 	err := cfg.Validate()
 	assert.Error(t, err)
@@ -259,7 +259,7 @@ func Test_Config_Validate_WithNonexistentSummary(t *testing.T) {
 func Test_Config_Validate_WithMalformedSummary(t *testing.T) {
 	// Create a temporary malformed summary settings file
 	tmpDir := t.TempDir()
-	summaryPath := filepath.Join(tmpDir, "custom_summary.yml")
+	summaryPath := filepath.Join(tmpDir, "summary.yml")
 	summaryContent := `
 message_patterns:
   - prefix: "error:"
@@ -280,7 +280,7 @@ message_patterns:
 func Test_Config_Validate_WithDuplicateSummaryFields(t *testing.T) {
 	// Create a temporary summary settings file with duplicate fields
 	tmpDir := t.TempDir()
-	summaryPath := filepath.Join(tmpDir, "custom_summary.yml")
+	summaryPath := filepath.Join(tmpDir, "summary.yml")
 	summaryContent := `
 message_patterns:
   - prefix: "error:"
@@ -321,7 +321,7 @@ default_action: accept
 	err = os.WriteFile(filterPath, []byte(filterContent), 0644)
 	require.NoError(t, err)
 
-	summaryPath := filepath.Join(tmpDir, "custom_summary.yml")
+	summaryPath := filepath.Join(tmpDir, "summary.yml")
 	summaryContent := `
 message_patterns:
   - prefix: "error:"
