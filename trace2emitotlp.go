@@ -283,7 +283,7 @@ func emitProcessSpan(span *ptrace.Span, tr2 *trace2Dataset, dl FilterDetailLevel
 		summaryMap := tr2.process.summary.toMap()
 		if len(summaryMap) > 0 {
 			jargs, _ := json.Marshal(summaryMap)
-			sm.PutStr(string(Trace2ProcessCustom), string(jargs))
+			sm.PutStr(string(Trace2ProcessSummary), string(jargs))
 		}
 	}
 
