@@ -52,6 +52,10 @@ type Config struct {
 	// Pathname to YML file containing our filter settings.
 	FilterSettingsPath string `mapstructure:"filter"`
 	filterSettings     *FilterSettings
+
+	// Pathname to YML file containing summary settings.
+	SummaryPath string `mapstructure:"summary"`
+	summary     *SummarySettings
 }
 
 // `Validate()` checks if the receiver configuration is valid.
@@ -106,6 +110,13 @@ func (cfg *Config) Validate() error {
 
 	if len(cfg.FilterSettingsPath) > 0 {
 		cfg.filterSettings, err = parseFilterSettings(cfg.FilterSettingsPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	if len(cfg.SummaryPath) > 0 {
+		cfg.summary, err = parseSummarySettings(cfg.SummaryPath)
 		if err != nil {
 			return err
 		}

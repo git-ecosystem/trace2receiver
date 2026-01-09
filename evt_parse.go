@@ -46,6 +46,7 @@ type TrEvent struct {
 	pm_generic_data *TrEventGenericData
 	pm_timer        *TrEventTimer   // "timer" and "th_timer"
 	pm_counter      *TrEventCounter // "counter" and "th_counter"
+	pm_printf       *TrEventPrintf
 }
 
 type FnExtractKeys func(evt *TrEvent, jm *jmap) (err error)
@@ -80,6 +81,7 @@ var ekm *ExtractKeysMap = &ExtractKeysMap{
 	"th_timer":       extract_keys__timer,
 	"counter":        extract_keys__counter,
 	"th_counter":     extract_keys__counter,
+	"printf":         extract_keys__printf,
 	"too_many_files": nil, // we don't care about this
 }
 
@@ -300,6 +302,21 @@ func extract_keys__error(evt *TrEvent, jm *jmap) (err error) {
 		return err
 	}
 	if evt.pm_error.mf_fmt, err = jm.getRequiredString("fmt"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Event fields only present in an "event":"printf" event
+type TrEventPrintf struct {
+	mf_msg string
+}
+
+func extract_keys__printf(evt *TrEvent, jm *jmap) (err error) {
+	evt.pm_printf = &TrEventPrintf{}
+
+	if evt.pm_printf.mf_msg, err = jm.getRequiredString("msg"); err != nil {
 		return err
 	}
 
