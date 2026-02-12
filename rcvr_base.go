@@ -35,11 +35,11 @@ func (rcvr_base *Rcvr_Base) Start(unused_ctx context.Context, host component.Hos
 		rcvr_base.Logger.Info("Command verbs are enabled")
 	}
 
-	if rcvr_base.RcvrConfig.piiSettings != nil {
-		if rcvr_base.RcvrConfig.piiSettings.Include.Hostname {
+	if rcvr_base.RcvrConfig.Pii != nil {
+		if rcvr_base.RcvrConfig.Pii.Include.Hostname {
 			rcvr_base.Logger.Info("PII: Hostname logging is enabled")
 		}
-		if rcvr_base.RcvrConfig.piiSettings.Include.Username {
+		if rcvr_base.RcvrConfig.Pii.Include.Username {
 			rcvr_base.Logger.Info("PII: Username logging is enabled")
 		}
 	}

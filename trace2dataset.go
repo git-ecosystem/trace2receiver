@@ -268,8 +268,8 @@ func NewTrace2Dataset(rcvr_base *Rcvr_Base) *trace2Dataset {
 	tr2.exec = make(map[int64]*TrExec)
 
 	// Initialize summary accumulator if configured
-	if rcvr_base != nil && rcvr_base.RcvrConfig != nil && rcvr_base.RcvrConfig.summary != nil {
-		tr2.process.summary = configuredSummary(rcvr_base.RcvrConfig.summary)
+	if rcvr_base != nil && rcvr_base.RcvrConfig != nil && rcvr_base.RcvrConfig.Summary != nil {
+		tr2.process.summary = configuredSummary(rcvr_base.RcvrConfig.Summary)
 	}
 
 	return tr2
@@ -512,7 +512,7 @@ func (tr2 *trace2Dataset) exportTraces() {
 	}
 
 	dl, dl_debug := computeDetailLevel(
-		tr2.rcvr_base.RcvrConfig.filterSettings,
+		tr2.rcvr_base.RcvrConfig.Filter,
 		tr2.process.paramSetValues,
 		tr2.process.qualifiedNames)
 
@@ -523,8 +523,8 @@ func (tr2 *trace2Dataset) exportTraces() {
 	}
 
 	var keynames FilterKeynames
-	if tr2.rcvr_base.RcvrConfig.filterSettings != nil {
-		keynames = tr2.rcvr_base.RcvrConfig.filterSettings.Keynames
+	if tr2.rcvr_base.RcvrConfig.Filter != nil {
+		keynames = tr2.rcvr_base.RcvrConfig.Filter.Keynames
 	}
 	traces := tr2.ToTraces(dl, keynames)
 
