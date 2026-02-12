@@ -14,6 +14,11 @@ The PII settings are specified inline under the
 parameter in the main `config.yml` file.  Alternatively, you can use
 the `${file:PATH}` syntax to reference an external YAML file.
 
+For backwards compatibility, you can also specify a plain file path
+string (without the `${file:}` wrapper) as the value of the `pii`
+field, and the receiver will read and parse the YAML file at that
+path.
+
 ## PII Settings Syntax
 
 The PII settings have the following syntax:

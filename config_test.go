@@ -1,10 +1,13 @@
 package trace2receiver
 
 import (
+	"os"
+	"path/filepath"
 	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // Test Validate with minimal valid config on Windows
@@ -267,6 +270,127 @@ func Test_Config_Validate_WithCommandControlEnabled(t *testing.T) {
 
 	err := cfg.Validate()
 	assert.NoError(t, err)
+}
+
+// Test Validate with PII settings from file path
+func Test_Config_Validate_WithPiiFilePath(t *testing.T) {
+	tmpDir := t.TempDir()
+	piiPath := filepath.Join(tmpDir, "pii.yml")
+	piiContent := `
+include:
+  hostname: true
+  username: false
+`
+	err := os.WriteFile(piiPath, []byte(piiContent), 0644)
+	require.NoError(t, err)
+
+	cfg := createMinimalValidConfig()
+	cfg.rawPii = piiPath
+
+	err = cfg.Validate()
+	assert.NoError(t, err)
+	assert.NotNil(t, cfg.Pii)
+	assert.True(t, cfg.Pii.Include.Hostname)
+	assert.False(t, cfg.Pii.Include.Username)
+}
+
+// Test Validate with invalid PII file path
+func Test_Config_Validate_WithInvalidPiiFilePath(t *testing.T) {
+	cfg := createMinimalValidConfig()
+	cfg.rawPii = "/nonexistent/pii.yml"
+
+	err := cfg.Validate()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "pii:")
+}
+
+// Test Validate with filter settings from file path
+func Test_Config_Validate_WithFilterFilePath(t *testing.T) {
+	tmpDir := t.TempDir()
+	filterPath := filepath.Join(tmpDir, "filter.yml")
+	filterContent := `
+defaults:
+  ruleset: "dl:verbose"
+`
+	err := os.WriteFile(filterPath, []byte(filterContent), 0644)
+	require.NoError(t, err)
+
+	cfg := createMinimalValidConfig()
+	cfg.rawFilter = filterPath
+
+	err = cfg.Validate()
+	assert.NoError(t, err)
+	assert.NotNil(t, cfg.Filter)
+}
+
+// Test Validate with invalid filter file path
+func Test_Config_Validate_WithInvalidFilterFilePath(t *testing.T) {
+	cfg := createMinimalValidConfig()
+	cfg.rawFilter = "/nonexistent/filter.yml"
+
+	err := cfg.Validate()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "filter:")
+}
+
+// Test Validate with summary settings from file path
+func Test_Config_Validate_WithSummaryFilePath(t *testing.T) {
+	tmpDir := t.TempDir()
+	summaryPath := filepath.Join(tmpDir, "summary.yml")
+	summaryContent := `
+message_patterns:
+  - prefix: "error:"
+    field_name: "error_count"
+  - prefix: "warning:"
+    field_name: "warning_count"
+
+region_timers:
+  - category: "index"
+    label: "do_read_index"
+    count_field: "index_read_count"
+    time_field: "index_read_time"
+`
+	err := os.WriteFile(summaryPath, []byte(summaryContent), 0644)
+	require.NoError(t, err)
+
+	cfg := createMinimalValidConfig()
+	cfg.rawSummary = summaryPath
+
+	err = cfg.Validate()
+	assert.NoError(t, err)
+	assert.NotNil(t, cfg.Summary)
+	assert.Equal(t, 2, len(cfg.Summary.MessagePatterns))
+	assert.Equal(t, 1, len(cfg.Summary.RegionTimers))
+}
+
+// Test Validate with invalid summary file path
+func Test_Config_Validate_WithInvalidSummaryFilePath(t *testing.T) {
+	cfg := createMinimalValidConfig()
+	cfg.rawSummary = "/nonexistent/summary.yml"
+
+	err := cfg.Validate()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "summary:")
+}
+
+// Test Validate with malformed summary from file path
+func Test_Config_Validate_WithMalformedSummaryFilePath(t *testing.T) {
+	tmpDir := t.TempDir()
+	summaryPath := filepath.Join(tmpDir, "summary.yml")
+	summaryContent := `
+message_patterns:
+  - prefix: "error:"
+    field_name: ""
+`
+	err := os.WriteFile(summaryPath, []byte(summaryContent), 0644)
+	require.NoError(t, err)
+
+	cfg := createMinimalValidConfig()
+	cfg.rawSummary = summaryPath
+
+	err = cfg.Validate()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "field_name cannot be empty")
 }
 
 // Helper function to create a minimal valid config for the current platform

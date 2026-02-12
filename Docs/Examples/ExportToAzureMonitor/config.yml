@@ -15,6 +15,9 @@
 #
 # You can also use ${file:PATH} to reference an external YAML file,
 # e.g.: filter: "${file:/path/to/filter.yml}"
+#
+# For backwards compatibility, you can also specify a plain file path:
+# e.g.: filter: "/path/to/filter.yml"
 
 receivers:
   trace2receiver:

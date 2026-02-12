@@ -69,7 +69,8 @@ receivers:
 ```
 
 If you prefer to keep the `pii`, `filter`, or `summary` configuration
-in a separate file, you can use the `${file:PATH}` syntax:
+in a separate file, you can use the `${file:PATH}` syntax or specify
+a simple file path string:
 
 ```
 receivers:
@@ -78,6 +79,18 @@ receivers:
     pipe:   "//./pipe/my-collector.pipe"
     pii:    "${file:/usr/local/my-collector/pii.yml}"
     filter: "${file:/usr/local/my-collector/filter.yml}"
+```
+
+For backwards compatibility, you can also specify a plain file path
+without the `${file:}` wrapper:
+
+```
+receivers:
+  trace2receiver:
+    socket: "/usr/local/my-collector/trace2.socket"
+    pipe:   "//./pipe/my-collector.pipe"
+    pii:    "/usr/local/my-collector/pii.yml"
+    filter: "/usr/local/my-collector/filter.yml"
 ```
 
 ### `<unix-domain-socket-pathname>` (Required on Unix)
@@ -129,6 +142,9 @@ $ git config --system trace2.eventtarget "//./pipe/my-collector.pipe"
 Inline PII settings controlling privacy-related feature flags.
 This is optional.  These features are disabled by default.
 
+For backwards compatibility, this field also accepts a simple string
+containing a file path to a YAML file with the PII settings.
+
 See [config PII settings](./config-pii-settings.md) for details.
 
 ### `filter` (Optional)
@@ -137,4 +153,16 @@ Inline filter settings controlling the verbosity of the
 generated OTEL telemetry data.  This is optional.  If omitted,
 summary-level telemetry will be emitted.
 
+For backwards compatibility, this field also accepts a simple string
+containing a file path to a YAML file with the filter settings.
+
 See [config filter settings](./config-filter-settings.md) for details.
+
+### `summary` (Optional)
+
+Inline summary settings controlling aggregated metrics from trace2
+events.  This is optional.  If omitted, no summary metrics will be
+emitted.
+
+For backwards compatibility, this field also accepts a simple string
+containing a file path to a YAML file with the summary settings.
