@@ -522,7 +522,11 @@ func (tr2 *trace2Dataset) exportTraces() {
 		return
 	}
 
-	traces := tr2.ToTraces(dl, tr2.rcvr_base.RcvrConfig.filterSettings.Keynames)
+	var keynames FilterKeynames
+	if tr2.rcvr_base.RcvrConfig.filterSettings != nil {
+		keynames = tr2.rcvr_base.RcvrConfig.filterSettings.Keynames
+	}
+	traces := tr2.ToTraces(dl, keynames)
 
 	err := tr2.rcvr_base.TracesConsumer.ConsumeTraces(tr2.rcvr_base.ctx, traces)
 	if err != nil {
