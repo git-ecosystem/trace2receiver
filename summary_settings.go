@@ -60,19 +60,29 @@ func parseSummarySettingsFromBuffer(data []byte, path string) (*SummarySettings,
 		return nil, err
 	}
 
+	if err = css.validate(); err != nil {
+		return nil, err
+	}
+
+	return css, nil
+}
+
+// validate checks the parsed summary settings for errors such as
+// empty required fields and duplicate field names.
+func (css *SummarySettings) validate() error {
 	// Track all field names to detect duplicates
 	fieldNames := make(map[string]bool)
 
 	// Validate message pattern rules
 	for i, rule := range css.MessagePatterns {
 		if len(rule.Prefix) == 0 {
-			return nil, fmt.Errorf("message_patterns[%d]: prefix cannot be empty", i)
+			return fmt.Errorf("message_patterns[%d]: prefix cannot be empty", i)
 		}
 		if len(rule.FieldName) == 0 {
-			return nil, fmt.Errorf("message_patterns[%d]: field_name cannot be empty", i)
+			return fmt.Errorf("message_patterns[%d]: field_name cannot be empty", i)
 		}
 		if fieldNames[rule.FieldName] {
-			return nil, fmt.Errorf("message_patterns[%d]: duplicate field_name '%s'", i, rule.FieldName)
+			return fmt.Errorf("message_patterns[%d]: duplicate field_name '%s'", i, rule.FieldName)
 		}
 		fieldNames[rule.FieldName] = true
 	}
@@ -80,29 +90,29 @@ func parseSummarySettingsFromBuffer(data []byte, path string) (*SummarySettings,
 	// Validate region timer rules
 	for i, rule := range css.RegionTimers {
 		if len(rule.Category) == 0 {
-			return nil, fmt.Errorf("region_timers[%d]: category cannot be empty", i)
+			return fmt.Errorf("region_timers[%d]: category cannot be empty", i)
 		}
 		if len(rule.Label) == 0 {
-			return nil, fmt.Errorf("region_timers[%d]: label cannot be empty", i)
+			return fmt.Errorf("region_timers[%d]: label cannot be empty", i)
 		}
 		if len(rule.CountField) == 0 && len(rule.TimeField) == 0 {
-			return nil, fmt.Errorf("region_timers[%d]: at least one of count_field or time_field must be specified", i)
+			return fmt.Errorf("region_timers[%d]: at least one of count_field or time_field must be specified", i)
 		}
 
 		if len(rule.CountField) > 0 {
 			if fieldNames[rule.CountField] {
-				return nil, fmt.Errorf("region_timers[%d]: duplicate field_name '%s'", i, rule.CountField)
+				return fmt.Errorf("region_timers[%d]: duplicate field_name '%s'", i, rule.CountField)
 			}
 			fieldNames[rule.CountField] = true
 		}
 
 		if len(rule.TimeField) > 0 {
 			if fieldNames[rule.TimeField] {
-				return nil, fmt.Errorf("region_timers[%d]: duplicate field_name '%s'", i, rule.TimeField)
+				return fmt.Errorf("region_timers[%d]: duplicate field_name '%s'", i, rule.TimeField)
 			}
 			fieldNames[rule.TimeField] = true
 		}
 	}
 
-	return css, nil
+	return nil
 }

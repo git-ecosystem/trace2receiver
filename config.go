@@ -7,6 +7,11 @@ import (
 	"strings"
 )
 
+// Note: The `pii`, `filter`, and `summary` fields accept inline
+// YAML configuration.  If you prefer to keep the configuration
+// in a separate file, use the `${file:PATH}` syntax to reference
+// an external YAML file.
+
 // `Config` represents the complete configuration settings for
 // an individual receiver declaration from the `config.yaml`.
 //
@@ -45,17 +50,15 @@ type Config struct {
 	// data stream.
 	AllowCommandControlVerbs bool `mapstructure:"enable_commands"`
 
-	// Pathname to YML file containing PII settings.
-	PiiSettingsPath string `mapstructure:"pii"`
-	piiSettings     *PiiSettings
+	// PII settings control whether possibly GDPR-sensitive fields
+	// are included in the telemetry output.
+	Pii *PiiSettings `mapstructure:"pii"`
 
-	// Pathname to YML file containing our filter settings.
-	FilterSettingsPath string `mapstructure:"filter"`
-	filterSettings     *FilterSettings
+	// Filter settings control how the OTLP output is filtered.
+	Filter *FilterSettings `mapstructure:"filter"`
 
-	// Pathname to YML file containing summary settings.
-	SummaryPath string `mapstructure:"summary"`
-	summary     *SummarySettings
+	// Summary settings control aggregated metrics from trace2 events.
+	Summary *SummarySettings `mapstructure:"summary"`
 }
 
 // `Validate()` checks if the receiver configuration is valid.
@@ -101,23 +104,14 @@ func (cfg *Config) Validate() error {
 		cfg.UnixSocketPath = path
 	}
 
-	if len(cfg.PiiSettingsPath) > 0 {
-		cfg.piiSettings, err = parsePiiFile(cfg.PiiSettingsPath)
-		if err != nil {
+	if cfg.Filter != nil {
+		if err = cfg.Filter.validate(); err != nil {
 			return err
 		}
 	}
 
-	if len(cfg.FilterSettingsPath) > 0 {
-		cfg.filterSettings, err = parseFilterSettings(cfg.FilterSettingsPath)
-		if err != nil {
-			return err
-		}
-	}
-
-	if len(cfg.SummaryPath) > 0 {
-		cfg.summary, err = parseSummarySettings(cfg.SummaryPath)
-		if err != nil {
+	if cfg.Summary != nil {
+		if err = cfg.Summary.validate(); err != nil {
 			return err
 		}
 	}
