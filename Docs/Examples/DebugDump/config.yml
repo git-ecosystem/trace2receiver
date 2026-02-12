@@ -12,18 +12,24 @@
 # THIS WILL GENERATE A LOT OF DATA, so use it with care.
 #
 # If you want to enable filtering and/or PII data, uncomment the
-# correpsonding lines and create the additional .yml files.
+# corresponding lines below.
+#
+# You can also use ${file:PATH} to reference an external YAML file,
+# e.g.: filter: "${file:/path/to/filter.yml}"
 
 receivers:
   trace2receiver:
     socket: "/usr/local/<my-install-dir>/trace2.socket"
     pipe:   "//./pipe/<my-pipe-name>"
 
-#   filter: "/usr/local/<my-install-dir>/filter.yml"
-#   pii:    "/usr/local/<my-install-dir>/pii.yml"
+#   pii:
+#     include:
+#       hostname: true
+#       username: false
 
-#   filter: "C:/ProgramData/<my-data-dir>/filter.yml"
-#   pii:    "C:/ProgramData/<my-data-dir>/pii.yml"
+#   filter:
+#     defaults:
+#       ruleset: "dl:verbose"
 
 processors:
 

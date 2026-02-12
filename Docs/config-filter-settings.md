@@ -1,14 +1,15 @@
 # Config Filter Settings
 
-The `filter.yml` file controls how the `trace2receiver` component
+The filter settings control how the `trace2receiver` component
 translates the Trace2 data stream from Git commands into OTEL data
 structures.  This filtering is content- and context-aware and is
 independent of any statistical filtering performed by later stages in
 the OTEL Collector pipeline.
 
-The filter settings pathname is set in the
+The filter settings are specified inline under the
 `receivers.trace2receiver.filter`
-parameter in the main `config.yml` file.
+parameter in the main `config.yml` file.  Alternatively, you can use
+the `${file:PATH}` syntax to reference an external YAML file.
 
 
 
@@ -90,14 +91,15 @@ A ruleset name is essentially an alias for the underlying ruleset
 file.  Using a ruleset name avoids requiring users know how and where
 the telemetry service is installed.
 
-The `filter.yml` file contains a dictionary to map ruleset names to
+The filter settings contain a dictionary to map ruleset names to
 pathnames:
 
 ```
-rulesets:
-  <ruleset-name-1>: <ruleset-pathname-1>
-  <ruleset-name-2>: <ruleset-pathname-2>
-  ...
+filter:
+  rulesets:
+    <ruleset-name-1>: <ruleset-pathname-1>
+    <ruleset-name-2>: <ruleset-pathname-2>
+    ...
 ```
 
 Ruleset files will be loaded when the receiver starts up.
@@ -127,14 +129,15 @@ the ruleset "rs:bar".
 
 A repo nickname is a simple string without either `dl:` or `rs:` prefix.
 
-The `filter.yml` file contains a dictionary to map nicknames to detail
+The filter settings contain a dictionary to map nicknames to detail
 levels or rulesets:
 
 ```
-nicknames:
-  <nickname-1>: <ruleset-name> | <detail-level>
-  <nickname-1>: <ruleset-name> | <detail-level>
-  ...
+filter:
+  nicknames:
+    <nickname-1>: <ruleset-name> | <detail-level>
+    <nickname-1>: <ruleset-name> | <detail-level>
+    ...
 ```
 
 
@@ -160,13 +163,14 @@ or `system` level.
 $ git config --system trace2.configparams "otel.trace2.*"
 ```
 
-The `filter.yml` contains a dictionary to define the spelling of
+The filter settings contain a dictionary to define the spelling of
 these keys:
 
 ```
-keynames:
-  nickname_key: "otel.trace2.nickname"
-  ruleset_key:  "otel.trace2.ruleset"
+filter:
+  keynames:
+    nickname_key: "otel.trace2.nickname"
+    ruleset_key:  "otel.trace2.ruleset"
 ```
 
 
@@ -199,7 +203,7 @@ $ git -c otel.trace2.nickname=personal status
 ```
 
 If no nickname is defined or the given repo nickname is not defined in
-the `filter.yml` file, the receiver will fall back to the default
+the filter settings, the receiver will fall back to the default
 filter settings.
 
 _In the above example, I've suggested "monorepo" and "personal" as
@@ -244,8 +248,8 @@ $ cd /path/to/my/repo4
 $ git -c otel.trace2.ruleset="dl:summary" status
 ```
 
-If the named ruleset or detail level is not defined in the `filter.yml`
-file, the receiver will fall back to the default filter settings.
+If the named ruleset or detail level is not defined in the filter
+settings, the receiver will fall back to the default filter settings.
 
 If a Git command sends both a `ruleset_key` and `nickname_key`, the
 `ruleset_key` wins.  (Both key values will be included in the OTEL
@@ -257,26 +261,27 @@ the `ruleset_key`.)
 ## Filter Settings Syntax
 
 Now that all of the concepts have been introduced, we can describe
-the complete syntax of the `filter.yml` file.  All sections and rows
+the complete syntax of the filter settings.  All sections and rows
 are optional.
 
 ```
-keynames:
-  nickname_key: <git-config-key>
-  ruleset_key:  <git-config-key>
+filter:
+  keynames:
+    nickname_key: <git-config-key>
+    ruleset_key:  <git-config-key>
 
-nicknames:
-  <nickname-1>: <ruleset-name> | <detail-level>
-  <nickname-1>: <ruleset-name> | <detail-level>
-  ...
+  nicknames:
+    <nickname-1>: <ruleset-name> | <detail-level>
+    <nickname-1>: <ruleset-name> | <detail-level>
+    ...
 
-rulesets:
-  <ruleset-name-1>: <ruleset-pathname-1>
-  <ruleset-name-2>: <ruleset-pathname-2>
-  ...
+  rulesets:
+    <ruleset-name-1>: <ruleset-pathname-1>
+    <ruleset-name-2>: <ruleset-pathname-2>
+    ...
 
-defaults:
-  ruleset: <ruleset-name> | <detail-level>
+  defaults:
+    ruleset: <ruleset-name> | <detail-level>
 ```
 
 The value of the `defaults.ruleset` parameter will be used when a Git
@@ -292,19 +297,20 @@ used.
 In this filter:
 
 ```
-keynames:
-  nickname_key: "otel.trace2.nickname"
-  ruleset_key:  "otel.trace2.ruleset"
+filter:
+  keynames:
+    nickname_key: "otel.trace2.nickname"
+    ruleset_key:  "otel.trace2.ruleset"
 
-nicknames:
-  monorepo: "dl:verbose"
-  personal: "dl:drop"
+  nicknames:
+    monorepo: "dl:verbose"
+    personal: "dl:drop"
 
-rulesets:
-  "rs:status": "./rulesets/rs-status.yml"
+  rulesets:
+    "rs:status": "./rulesets/rs-status.yml"
 
-defaults:
-  ruleset: "dl:summary"
+  defaults:
+    ruleset: "dl:summary"
 ```
 
 The receiver will watch for the `otel.trace2.nickname` and
