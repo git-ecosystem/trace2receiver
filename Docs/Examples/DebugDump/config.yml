@@ -16,8 +16,7 @@
 
 receivers:
   trace2receiver:
-    socket: "/usr/local/<my-install-dir>/trace2.socket"
-    pipe:   "//./pipe/<my-pipe-name>"
+    target: ${env:TRACE2_TARGET}
 
 #   filter: "/usr/local/<my-install-dir>/filter.yml"
 #   pii:    "/usr/local/<my-install-dir>/pii.yml"

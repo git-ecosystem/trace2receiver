@@ -41,6 +41,18 @@ type Config struct {
 	// This config file field is ignored on Windows platforms.
 	UnixSocketPath string `mapstructure:"socket"`
 
+	// A combination of either a NamedPipePath or a UnixSocketPath.
+	// On Unix this can only be considered as a Unix domain socket,
+	// and on Windows we can only consider it as a named pipe.
+	// This allows the user to specify a property that works for
+	// either platform, and we will normalize it to the correct one
+	// at runtime. If both are specified we consider this an error.
+	// The idea behind this is to allow users to specify the value
+	// of the Target property as an environment variable via the
+	// ${env:VAR} syntax, and then use that environment variable to
+	// set the correct path for their platform.
+	Target string `mapstructure:"target"`
+
 	// Allow command and control verbs to be embedded in the Trace2
 	// data stream.
 	AllowCommandControlVerbs bool `mapstructure:"enable_commands"`
@@ -78,6 +90,23 @@ func (cfg *Config) Validate() error {
 
 	var path string
 	var err error
+
+	// If `target` is set, normalize it into the platform-specific
+	// field.  It is an error to set both `target` and the
+	// platform-specific field.
+	if len(cfg.Target) > 0 {
+		if runtime.GOOS == "windows" {
+			if len(cfg.NamedPipePath) > 0 {
+				return fmt.Errorf("receivers.trace2receiver: cannot specify both 'target' and 'pipe'")
+			}
+			cfg.NamedPipePath = cfg.Target
+		} else {
+			if len(cfg.UnixSocketPath) > 0 {
+				return fmt.Errorf("receivers.trace2receiver: cannot specify both 'target' and 'socket'")
+			}
+			cfg.UnixSocketPath = cfg.Target
+		}
+	}
 
 	if runtime.GOOS == "windows" {
 		if len(cfg.NamedPipePath) == 0 {

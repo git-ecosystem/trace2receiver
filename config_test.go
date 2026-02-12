@@ -356,6 +356,83 @@ func Test_Config_Validate_WithCommandControlEnabled(t *testing.T) {
 	assert.NoError(t, err)
 }
 
+// Test Validate with Target on Unix sets UnixSocketPath
+func Test_Config_Validate_TargetUnix(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping Unix-specific test")
+	}
+
+	cfg := &Config{
+		Target: "/tmp/test.socket",
+	}
+
+	err := cfg.Validate()
+	assert.NoError(t, err)
+	assert.Equal(t, "/tmp/test.socket", cfg.UnixSocketPath)
+}
+
+// Test Validate with Target with af_unix prefix on Unix
+func Test_Config_Validate_TargetAfUnixPrefixUnix(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping Unix-specific test")
+	}
+
+	cfg := &Config{
+		Target: "af_unix:/tmp/test.socket",
+	}
+
+	err := cfg.Validate()
+	assert.NoError(t, err)
+	assert.Equal(t, "/tmp/test.socket", cfg.UnixSocketPath)
+}
+
+// Test Validate with Target on Windows sets NamedPipePath
+func Test_Config_Validate_TargetWindows(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Skipping Windows-specific test")
+	}
+
+	cfg := &Config{
+		Target: "test-pipe",
+	}
+
+	err := cfg.Validate()
+	assert.NoError(t, err)
+	assert.Equal(t, `\\.\pipe\test-pipe`, cfg.NamedPipePath)
+}
+
+// Test Validate rejects Target and socket both set on Unix
+func Test_Config_Validate_TargetAndSocketConflictUnix(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Skipping Unix-specific test")
+	}
+
+	cfg := &Config{
+		Target:         "/tmp/target.socket",
+		UnixSocketPath: "/tmp/test.socket",
+	}
+
+	err := cfg.Validate()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot specify both 'target' and 'socket'")
+}
+
+// Test Validate rejects Target and pipe both set on Windows
+func Test_Config_Validate_TargetAndPipeConflictWindows(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Skipping Windows-specific test")
+	}
+
+	cfg := &Config{
+		Target:        "target-pipe",
+		NamedPipePath: "test-pipe",
+	}
+
+	err := cfg.Validate()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "cannot specify both 'target' and 'pipe'")
+}
+
 // Helper function to create a minimal valid config for the current platform
 func createMinimalValidConfig() *Config {
 	if runtime.GOOS == "windows" {

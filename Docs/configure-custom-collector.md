@@ -42,8 +42,7 @@ The `trace2receiver` component has the following config values:
 ```
 receivers:
   trace2receiver:
-    socket: <unix-domain-socket-pathname>
-    pipe:   <windows-named-pipe-pathname>
+    target: <trace2-target>
     pii:    <pii-settings-pathname>
     filter: <filter-settings-pathname>
 ```
@@ -53,17 +52,26 @@ For example:
 ```
 receivers:
   trace2receiver:
-    socket: "/usr/local/my-collector/trace2.socket"
-    pipe:   "//./pipe/my-collector.pipe"
+    target: "/usr/local/my-collector/trace2.socket"
     pii:    "/usr/local/my-collector/pii.yml"
     filter: "/usr/local/my-collector/filter.yml"
 ```
 
-### `<unix-domain-socket-pathname>` (Required on Unix)
+### `<trace2-target>` (Required)
 
-The pathname will be used on Linux and macOS hosts to create a Unix
-Domain Socket where the receiver will listen for telemetry from Git
-commands.  The socket will be created when the collector starts up.
+The `target` property is a string that specifies where the `trace2receiver`
+should listen for Trace2 telemetry from Git commands. This is required.
+It must be a pathname to a Unix Domain Socket on Unix hosts, or a pathname to a
+Windows Named Pipe on Windows hosts. The collector will create the socket or
+named pipe when it starts up. The `target` property can be specified directly
+as a string literal, or it can be specified indirectly using an environment
+variable. For example:
+
+```
+receivers:
+  trace2receiver:
+    target: ${env:TRACE2_TARGET}
+```
 
 To tell Git to send Trace2 telemetry to the receiver, you must set
 the Git `trace2.eventtarget` config setting at the `global` or
@@ -74,6 +82,7 @@ and
 [enabling a target](https://git-scm.com/docs/api-trace2#_enabling_a_target)
 for details.
 
+#### Unix
 ```
 $ git config --system trace2.eventtarget "af_unix:/usr/local/my-collector/trace2.socket"
 ```
@@ -81,7 +90,26 @@ $ git config --system trace2.eventtarget "af_unix:/usr/local/my-collector/trace2
 _The `af_unix:` prefix is required to tell Git that it should expect a
 Unix Domain Socket rather than a plain file._
 
-### `<windows-named-pipe-pathname>` (Required on Windows)
+#### Windows
+```
+$ git config --system trace2.eventtarget "//./pipe/my-collector.pipe"
+```
+
+_The `//./pipe/` prefix is required to tell Git that it should expect a
+Windows Named Pipe rather than a plain file._
+
+### `<unix-domain-socket-pathname>` (Unix-only, deprecated)
+
+The pathname will be used on Linux and macOS hosts to create a Unix
+Domain Socket where the receiver will listen for telemetry from Git
+commands.  The socket will be created when the collector starts up.
+
+Replaced by the more general `<trace2-target>` config value, which can be used
+on all platforms. It is an error to set both `target` and
+`unix-domain-socket-pathname`. If both are set, then then collector will fail to
+start.
+
+### `<windows-named-pipe-pathname>` (Windows-only, deprecated)
 
 The pathname will be used on Windows hosts to create a Windows Named
 Pipe where the receiver will listen for telemetry from Git commands.
@@ -90,18 +118,10 @@ pathname must refer to a local named pipe `//./pipe/...` because named
 pipe servers can only create and listen on local pipes.  You may use
 forward or backslashes.
 
-To tell Git to send Trace2 telemetry to the receiver, you must set
-the Git `trace2.eventtarget` config setting at the `global` or
-`system` level to this named pipe pathname.  See the Git Trace2 API
-documentation on the
-[event format target](https://git-scm.com/docs/api-trace2#_the_event_format_target)
-and
-[enabling a target](https://git-scm.com/docs/api-trace2#_enabling_a_target)
-for details.
-
-```
-$ git config --system trace2.eventtarget "//./pipe/my-collector.pipe"
-```
+Replaced by the more general `<trace2-target>` config value, which can be used
+on all platforms. It is an error to set both `target` and
+`windows-named-pipe-pathname`. If both are set, then then collector will fail to
+start.
 
 ### `<pii-settings-pathname>` (Optional)
 
