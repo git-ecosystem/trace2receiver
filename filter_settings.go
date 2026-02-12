@@ -82,25 +82,32 @@ func parseFilterSettingsFromBuffer(data []byte, path string) (*FilterSettings, e
 		return nil, err
 	}
 
-	// After parsing the YML and populating the `mapstructure` fields, we need
-	// to validate them and/or build internal structures from them.
-
-	// For each custom ruleset [<name> -> <path>] in the table (the map[string]string),
-	// create a peer entry in the internal [<name> -> <rsdef>] table and preload
-	// the various `ruleset.yml` files.
-	fs.rulesetDefs = make(map[string]*RulesetDefinition)
-	for k_rs_name, v_rs_path := range fs.Rulesets {
-		if !strings.HasPrefix(k_rs_name, "rs:") || len(k_rs_name) < 4 || len(v_rs_path) == 0 {
-			return nil, fmt.Errorf("ruleset has invalid name or pathname'%s':'%s'", k_rs_name, v_rs_path)
-		}
-
-		fs.rulesetDefs[k_rs_name], err = parseRulesetFile(v_rs_path)
-		if err != nil {
-			return nil, err
-		}
+	if err = fs.validate(); err != nil {
+		return nil, err
 	}
 
 	return fs, nil
+}
+
+// validate checks the parsed filter settings and builds internal
+// structures.  For each custom ruleset [<name> -> <path>] in the
+// table, create a peer entry in the internal [<name> -> <rsdef>]
+// table and preload the various `ruleset.yml` files.
+func (fs *FilterSettings) validate() error {
+	fs.rulesetDefs = make(map[string]*RulesetDefinition)
+	for k_rs_name, v_rs_path := range fs.Rulesets {
+		if !strings.HasPrefix(k_rs_name, "rs:") || len(k_rs_name) < 4 || len(v_rs_path) == 0 {
+			return fmt.Errorf("ruleset has invalid name or pathname'%s':'%s'", k_rs_name, v_rs_path)
+		}
+
+		var err error
+		fs.rulesetDefs[k_rs_name], err = parseRulesetFile(v_rs_path)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Add a ruleset to the filter settings.  This is primarily for writing test code.

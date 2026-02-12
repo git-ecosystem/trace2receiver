@@ -156,68 +156,185 @@ func Test_Config_Validate_RejectDgramUnix(t *testing.T) {
 	assert.Contains(t, err.Error(), "SOCK_DGRAM sockets are not supported")
 }
 
-// Test Validate with valid PII settings file
+// Test Validate with valid PII settings (inline)
 func Test_Config_Validate_WithValidPiiSettings(t *testing.T) {
-	// Create a temporary PII settings file
+	cfg := createMinimalValidConfig()
+	cfg.Pii = &PiiSettings{
+		Include: PiiInclude{
+			Hostname: true,
+			Username: false,
+		},
+	}
+
+	err := cfg.Validate()
+	assert.NoError(t, err)
+	assert.NotNil(t, cfg.Pii)
+}
+
+// Test Validate with valid filter settings (inline)
+func Test_Config_Validate_WithValidFilterSettings(t *testing.T) {
+	cfg := createMinimalValidConfig()
+	cfg.Filter = &FilterSettings{
+		Defaults: FilterDefaults{
+			RulesetName: "dl:verbose",
+		},
+	}
+
+	err := cfg.Validate()
+	assert.NoError(t, err)
+	assert.NotNil(t, cfg.Filter)
+}
+
+// Test Validate with valid summary settings (inline)
+func Test_Config_Validate_WithValidSummary(t *testing.T) {
+	cfg := createMinimalValidConfig()
+	cfg.Summary = &SummarySettings{
+		MessagePatterns: []MessagePatternRule{
+			{Prefix: "error:", FieldName: "error_count"},
+			{Prefix: "warning:", FieldName: "warning_count"},
+		},
+		RegionTimers: []RegionTimerRule{
+			{Category: "index", Label: "do_read_index", CountField: "index_read_count", TimeField: "index_read_time"},
+		},
+	}
+
+	err := cfg.Validate()
+	assert.NoError(t, err)
+	assert.NotNil(t, cfg.Summary)
+	assert.Equal(t, 2, len(cfg.Summary.MessagePatterns))
+	assert.Equal(t, 1, len(cfg.Summary.RegionTimers))
+}
+
+// Test Validate with invalid summary settings (empty field_name)
+func Test_Config_Validate_WithMalformedSummary(t *testing.T) {
+	cfg := createMinimalValidConfig()
+	cfg.Summary = &SummarySettings{
+		MessagePatterns: []MessagePatternRule{
+			{Prefix: "error:", FieldName: ""},
+		},
+	}
+
+	err := cfg.Validate()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "field_name cannot be empty")
+}
+
+// Test Validate with summary settings with duplicate field names
+func Test_Config_Validate_WithDuplicateSummaryFields(t *testing.T) {
+	cfg := createMinimalValidConfig()
+	cfg.Summary = &SummarySettings{
+		MessagePatterns: []MessagePatternRule{
+			{Prefix: "error:", FieldName: "count"},
+			{Prefix: "warning:", FieldName: "count"},
+		},
+	}
+
+	err := cfg.Validate()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "duplicate field_name")
+}
+
+// Test Validate with all optional settings valid (inline)
+func Test_Config_Validate_WithAllOptionalSettings(t *testing.T) {
+	cfg := createMinimalValidConfig()
+	cfg.Pii = &PiiSettings{
+		Include: PiiInclude{
+			Hostname: true,
+		},
+	}
+	cfg.Filter = &FilterSettings{
+		Defaults: FilterDefaults{
+			RulesetName: "dl:summary",
+		},
+	}
+	cfg.Summary = &SummarySettings{
+		MessagePatterns: []MessagePatternRule{
+			{Prefix: "error:", FieldName: "error_count"},
+		},
+		RegionTimers: []RegionTimerRule{
+			{Category: "index", Label: "do_read_index", TimeField: "index_read_time"},
+		},
+	}
+
+	err := cfg.Validate()
+	assert.NoError(t, err)
+	assert.NotNil(t, cfg.Pii)
+	assert.NotNil(t, cfg.Filter)
+	assert.NotNil(t, cfg.Summary)
+}
+
+// Test Validate with command control enabled
+func Test_Config_Validate_WithCommandControlEnabled(t *testing.T) {
+	cfg := createMinimalValidConfig()
+	cfg.AllowCommandControlVerbs = true
+
+	err := cfg.Validate()
+	assert.NoError(t, err)
+}
+
+// Test Validate with PII settings from file path
+func Test_Config_Validate_WithPiiFilePath(t *testing.T) {
 	tmpDir := t.TempDir()
 	piiPath := filepath.Join(tmpDir, "pii.yml")
 	piiContent := `
-pii_filter:
-  domains:
-    - pattern: "example.com"
-      replace: "<domain>"
+include:
+  hostname: true
+  username: false
 `
 	err := os.WriteFile(piiPath, []byte(piiContent), 0644)
 	require.NoError(t, err)
 
 	cfg := createMinimalValidConfig()
-	cfg.PiiSettingsPath = piiPath
+	cfg.rawPii = piiPath
 
 	err = cfg.Validate()
 	assert.NoError(t, err)
-	assert.NotNil(t, cfg.piiSettings)
+	assert.NotNil(t, cfg.Pii)
+	assert.True(t, cfg.Pii.Include.Hostname)
+	assert.False(t, cfg.Pii.Include.Username)
 }
 
-// Test Validate with invalid PII settings file
-func Test_Config_Validate_WithInvalidPiiSettings(t *testing.T) {
+// Test Validate with invalid PII file path
+func Test_Config_Validate_WithInvalidPiiFilePath(t *testing.T) {
 	cfg := createMinimalValidConfig()
-	cfg.PiiSettingsPath = "/nonexistent/pii.yml"
+	cfg.rawPii = "/nonexistent/pii.yml"
 
 	err := cfg.Validate()
 	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "pii:")
 }
 
-// Test Validate with valid filter settings file
-func Test_Config_Validate_WithValidFilterSettings(t *testing.T) {
-	// Create a temporary filter settings file
+// Test Validate with filter settings from file path
+func Test_Config_Validate_WithFilterFilePath(t *testing.T) {
 	tmpDir := t.TempDir()
 	filterPath := filepath.Join(tmpDir, "filter.yml")
 	filterContent := `
-default_action: accept
+defaults:
+  ruleset: "dl:verbose"
 `
 	err := os.WriteFile(filterPath, []byte(filterContent), 0644)
 	require.NoError(t, err)
 
 	cfg := createMinimalValidConfig()
-	cfg.FilterSettingsPath = filterPath
+	cfg.rawFilter = filterPath
 
 	err = cfg.Validate()
 	assert.NoError(t, err)
-	assert.NotNil(t, cfg.filterSettings)
+	assert.NotNil(t, cfg.Filter)
 }
 
-// Test Validate with invalid filter settings file
-func Test_Config_Validate_WithInvalidFilterSettings(t *testing.T) {
+// Test Validate with invalid filter file path
+func Test_Config_Validate_WithInvalidFilterFilePath(t *testing.T) {
 	cfg := createMinimalValidConfig()
-	cfg.FilterSettingsPath = "/nonexistent/filter.yml"
+	cfg.rawFilter = "/nonexistent/filter.yml"
 
 	err := cfg.Validate()
 	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "filter:")
 }
 
-// Test Validate with valid summary settings file
-func Test_Config_Validate_WithValidSummary(t *testing.T) {
-	// Create a temporary summary settings file
+// Test Validate with summary settings from file path
+func Test_Config_Validate_WithSummaryFilePath(t *testing.T) {
 	tmpDir := t.TempDir()
 	summaryPath := filepath.Join(tmpDir, "summary.yml")
 	summaryContent := `
@@ -237,27 +354,27 @@ region_timers:
 	require.NoError(t, err)
 
 	cfg := createMinimalValidConfig()
-	cfg.SummaryPath = summaryPath
+	cfg.rawSummary = summaryPath
 
 	err = cfg.Validate()
 	assert.NoError(t, err)
-	assert.NotNil(t, cfg.summary)
-	assert.Equal(t, 2, len(cfg.summary.MessagePatterns))
-	assert.Equal(t, 1, len(cfg.summary.RegionTimers))
+	assert.NotNil(t, cfg.Summary)
+	assert.Equal(t, 2, len(cfg.Summary.MessagePatterns))
+	assert.Equal(t, 1, len(cfg.Summary.RegionTimers))
 }
 
-// Test Validate with invalid summary settings file (nonexistent)
-func Test_Config_Validate_WithNonexistentSummary(t *testing.T) {
+// Test Validate with invalid summary file path
+func Test_Config_Validate_WithInvalidSummaryFilePath(t *testing.T) {
 	cfg := createMinimalValidConfig()
-	cfg.SummaryPath = "/nonexistent/summary.yml"
+	cfg.rawSummary = "/nonexistent/summary.yml"
 
 	err := cfg.Validate()
 	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "summary:")
 }
 
-// Test Validate with invalid summary settings file (malformed YAML)
-func Test_Config_Validate_WithMalformedSummary(t *testing.T) {
-	// Create a temporary malformed summary settings file
+// Test Validate with malformed summary from file path
+func Test_Config_Validate_WithMalformedSummaryFilePath(t *testing.T) {
 	tmpDir := t.TempDir()
 	summaryPath := filepath.Join(tmpDir, "summary.yml")
 	summaryContent := `
@@ -269,91 +386,11 @@ message_patterns:
 	require.NoError(t, err)
 
 	cfg := createMinimalValidConfig()
-	cfg.SummaryPath = summaryPath
+	cfg.rawSummary = summaryPath
 
 	err = cfg.Validate()
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "field_name cannot be empty")
-}
-
-// Test Validate with summary settings with duplicate field names
-func Test_Config_Validate_WithDuplicateSummaryFields(t *testing.T) {
-	// Create a temporary summary settings file with duplicate fields
-	tmpDir := t.TempDir()
-	summaryPath := filepath.Join(tmpDir, "summary.yml")
-	summaryContent := `
-message_patterns:
-  - prefix: "error:"
-    field_name: "count"
-  - prefix: "warning:"
-    field_name: "count"
-`
-	err := os.WriteFile(summaryPath, []byte(summaryContent), 0644)
-	require.NoError(t, err)
-
-	cfg := createMinimalValidConfig()
-	cfg.SummaryPath = summaryPath
-
-	err = cfg.Validate()
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "duplicate field_name")
-}
-
-// Test Validate with all optional settings valid
-func Test_Config_Validate_WithAllOptionalSettings(t *testing.T) {
-	// Create temporary files for all settings
-	tmpDir := t.TempDir()
-
-	piiPath := filepath.Join(tmpDir, "pii.yml")
-	piiContent := `
-pii_filter:
-  domains:
-    - pattern: "example.com"
-      replace: "<domain>"
-`
-	err := os.WriteFile(piiPath, []byte(piiContent), 0644)
-	require.NoError(t, err)
-
-	filterPath := filepath.Join(tmpDir, "filter.yml")
-	filterContent := `
-default_action: accept
-`
-	err = os.WriteFile(filterPath, []byte(filterContent), 0644)
-	require.NoError(t, err)
-
-	summaryPath := filepath.Join(tmpDir, "summary.yml")
-	summaryContent := `
-message_patterns:
-  - prefix: "error:"
-    field_name: "error_count"
-
-region_timers:
-  - category: "index"
-    label: "do_read_index"
-    time_field: "index_read_time"
-`
-	err = os.WriteFile(summaryPath, []byte(summaryContent), 0644)
-	require.NoError(t, err)
-
-	cfg := createMinimalValidConfig()
-	cfg.PiiSettingsPath = piiPath
-	cfg.FilterSettingsPath = filterPath
-	cfg.SummaryPath = summaryPath
-
-	err = cfg.Validate()
-	assert.NoError(t, err)
-	assert.NotNil(t, cfg.piiSettings)
-	assert.NotNil(t, cfg.filterSettings)
-	assert.NotNil(t, cfg.summary)
-}
-
-// Test Validate with command control enabled
-func Test_Config_Validate_WithCommandControlEnabled(t *testing.T) {
-	cfg := createMinimalValidConfig()
-	cfg.AllowCommandControlVerbs = true
-
-	err := cfg.Validate()
-	assert.NoError(t, err)
 }
 
 // Helper function to create a minimal valid config for the current platform
