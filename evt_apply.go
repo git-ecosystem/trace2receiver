@@ -830,6 +830,14 @@ func apply__data_generic(tr2 *trace2Dataset, evt *TrEvent) (err error) {
 	// nesting level n-1 is stored at regionStack[n-2] (assuming the
 	// Git process properly sets things up).
 
+	// Capture matching data values into importantEvents regardless of
+	// nesting level. This must run before any early returns below
+	// so that capture is not skipped when region attachment fails.
+	apply__important_events(tr2,
+		evt.pm_generic_data.mf_category,
+		evt.pm_generic_data.mf_key,
+		evt.pm_generic_data.mf_generic_value)
+
 	if evt.pm_generic_data.mf_nesting <= 1 {
 		tr2.process.setGenericDataValue(evt.pm_generic_data.mf_category,
 			evt.pm_generic_data.mf_key, evt.pm_generic_data.mf_generic_value)

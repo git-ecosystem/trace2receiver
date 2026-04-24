@@ -290,6 +290,81 @@ func x_TryLoadRuleset(t *testing.T, fs *FilterSettings, name string, path string
 
 // //////////////////////////////////////////////////////////////
 
+// //////////////////////////////////////////////////////////////
+// important_events validation tests
+
+func Test_ImportantEvents_Valid(t *testing.T) {
+	yml := `
+important_events:
+  - category: "gvfs-helper"
+    key_prefix: "error/"
+    field_name: "gvfs_helper_errors"
+  - category: "network"
+    key_prefix: "timeout/"
+    field_name: "network_timeouts"
+`
+	fs, err := parseFilterSettingsFromBuffer([]byte(yml), "test.yml")
+	assert.NoError(t, err)
+	assert.NotNil(t, fs)
+	assert.Equal(t, 2, len(fs.ImportantEvents))
+	assert.Equal(t, "gvfs-helper", fs.ImportantEvents[0].Category)
+	assert.Equal(t, "error/", fs.ImportantEvents[0].KeyPrefix)
+	assert.Equal(t, "gvfs_helper_errors", fs.ImportantEvents[0].FieldName)
+}
+
+func Test_ImportantEvents_EmptyCategory_Rejected(t *testing.T) {
+	yml := `
+important_events:
+  - category: ""
+    key_prefix: "error/"
+    field_name: "errors"
+`
+	_, err := parseFilterSettingsFromBuffer([]byte(yml), "test.yml")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "category cannot be empty")
+}
+
+func Test_ImportantEvents_EmptyKeyPrefix_Rejected(t *testing.T) {
+	yml := `
+important_events:
+  - category: "gvfs-helper"
+    key_prefix: ""
+    field_name: "errors"
+`
+	_, err := parseFilterSettingsFromBuffer([]byte(yml), "test.yml")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "key_prefix cannot be empty")
+}
+
+func Test_ImportantEvents_EmptyFieldName_Rejected(t *testing.T) {
+	yml := `
+important_events:
+  - category: "gvfs-helper"
+    key_prefix: "error/"
+    field_name: ""
+`
+	_, err := parseFilterSettingsFromBuffer([]byte(yml), "test.yml")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "field_name cannot be empty")
+}
+
+func Test_ImportantEvents_DuplicateFieldName_Rejected(t *testing.T) {
+	yml := `
+important_events:
+  - category: "gvfs-helper"
+    key_prefix: "error/"
+    field_name: "shared_name"
+  - category: "network"
+    key_prefix: "timeout/"
+    field_name: "shared_name"
+`
+	_, err := parseFilterSettingsFromBuffer([]byte(yml), "test.yml")
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "duplicate field_name")
+}
+
+// //////////////////////////////////////////////////////////////
+
 func Test_Nil_Nil_FilterSettings(t *testing.T) {
 
 	dl, dl_debug := computeDetailLevel(nil, nil, x_qn)

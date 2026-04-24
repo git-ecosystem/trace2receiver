@@ -101,10 +101,11 @@ const (
 
 	Trace2RepoNickname = attribute.Key("trace2.repo.nickname")
 
-	Trace2ProcessData     = attribute.Key("trace2.process.data")
-	Trace2ProcessTimers   = attribute.Key("trace2.process.timers")
-	Trace2ProcessCounters = attribute.Key("trace2.process.counters")
-	Trace2ProcessSummary   = attribute.Key("trace2.process.summary")
+	Trace2ProcessData            = attribute.Key("trace2.process.data")
+	Trace2ProcessTimers          = attribute.Key("trace2.process.timers")
+	Trace2ProcessCounters        = attribute.Key("trace2.process.counters")
+	Trace2ProcessSummary         = attribute.Key("trace2.process.summary")
+	Trace2ProcessImportantEvents = attribute.Key("trace2.process.important_events")
 
 	Trace2ThreadTimers   = attribute.Key("trace2.thread.timers")
 	Trace2ThreadCounters = attribute.Key("trace2.thread.counters")

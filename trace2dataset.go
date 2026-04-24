@@ -131,6 +131,10 @@ type TrProcess struct {
 
 	summary *SummaryAccumulator
 
+	// importantEvents holds verbatim-captured values from data events that
+	// matched important_events rules in the filter settings.
+	importantEvents map[string][]interface{}
+
 	qualifiedNames QualifiedNames
 }
 
@@ -267,9 +271,14 @@ func NewTrace2Dataset(rcvr_base *Rcvr_Base) *trace2Dataset {
 	tr2.pii = make(map[string]string)
 	tr2.exec = make(map[int64]*TrExec)
 
-	// Initialize summary accumulator if configured
-	if rcvr_base != nil && rcvr_base.RcvrConfig != nil && rcvr_base.RcvrConfig.summary != nil {
-		tr2.process.summary = configuredSummary(rcvr_base.RcvrConfig.summary)
+	if rcvr_base != nil && rcvr_base.RcvrConfig != nil {
+		cfg := rcvr_base.RcvrConfig
+		if cfg.summary != nil {
+			tr2.process.summary = configuredSummary(cfg.summary)
+		}
+		if cfg.filterSettings != nil && len(cfg.filterSettings.ImportantEvents) > 0 {
+			tr2.process.importantEvents = make(map[string][]interface{})
+		}
 	}
 
 	return tr2
