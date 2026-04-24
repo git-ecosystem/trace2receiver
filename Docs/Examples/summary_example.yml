@@ -44,3 +44,6 @@ region_timers:
 #     "batchTime": 12.3
 #   }
 # }
+#
+# To also capture specific data event values verbatim in the summary,
+# add important_events rules to your filter.yml instead.

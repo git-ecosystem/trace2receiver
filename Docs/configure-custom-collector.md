@@ -46,6 +46,7 @@ receivers:
     pipe:   <windows-named-pipe-pathname>
     pii:    <pii-settings-pathname>
     filter: <filter-settings-pathname>
+    summary: <summary-settings-pathname>
 ```
 
 For example:
@@ -57,6 +58,7 @@ receivers:
     pipe:   "//./pipe/my-collector.pipe"
     pii:    "/usr/local/my-collector/pii.yml"
     filter: "/usr/local/my-collector/filter.yml"
+    summary: "/usr/local/my-collector/summary.yml"
 ```
 
 ### `<unix-domain-socket-pathname>` (Required on Unix)
@@ -117,3 +119,22 @@ generated OTEL telemetry data.  This is optional.  If omitted,
 summary-level telemetry will be emitted.
 
 See [config filter settings](./config-filter-settings.md) for details.
+
+### `<summary-settings-pathname>` (Optional)
+
+The pathname to a `summary.yml` file controlling which trace2 events
+are aggregated into the `trace2.process.summary` attribute on the OTEL
+process span.  This is optional.  If omitted, no aggregated summary
+metrics are emitted.
+
+The summary is emitted at all detail levels (including `dl:summary`),
+making it useful for surfacing aggregated statistics without requiring
+verbose telemetry.
+
+See the [summary example](./Examples/summary_example.yml) for a
+complete example configuration.
+
+To capture specific data event values verbatim (emitted in a separate
+`trace2.process.important_events` span attribute), use the
+`important_events` section of the filter settings.  See
+[config filter settings](./config-filter-settings.md) for details.
