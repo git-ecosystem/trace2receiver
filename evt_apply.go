@@ -844,7 +844,7 @@ func apply__data_generic(tr2 *trace2Dataset, evt *TrEvent) (err error) {
 		return nil
 	}
 	rWant := evt.pm_generic_data.mf_nesting - 2
-	if int64(len(th.regionStack)) < rWant {
+	if rWant < 0 || int64(len(th.regionStack)) <= rWant {
 		// TODO log debug warning.
 		return nil
 	}
