@@ -10,14 +10,34 @@ import (
 // look for in the Trace2 event stream to help us decide how to
 // filter data for a particular command.
 type FilterSettings struct {
-	Keynames  FilterKeynames  `mapstructure:"keynames"`
-	Nicknames FilterNicknames `mapstructure:"nicknames"`
-	Rulesets  FilterRulesets  `mapstructure:"rulesets"`
-	Defaults  FilterDefaults  `mapstructure:"defaults"`
+	Keynames        FilterKeynames   `mapstructure:"keynames"`
+	Nicknames       FilterNicknames  `mapstructure:"nicknames"`
+	Rulesets        FilterRulesets   `mapstructure:"rulesets"`
+	Defaults        FilterDefaults   `mapstructure:"defaults"`
+	ImportantEvents []ImportantEventRule `mapstructure:"important_events"`
 
 	// The set of custom rulesets defined in YML are each parsed
 	// and loaded into definitions so that we can use them.
 	rulesetDefs map[string]*RulesetDefinition
+}
+
+// ImportantEventRule defines a rule for promoting values from data events
+// that match a specific (category, key prefix) pair into the process
+// summary, regardless of the active detail level. This lets operators
+// guarantee that certain data event values are always captured and
+// surfaced in the OTEL process span even when verbose telemetry is
+// disabled. Multiple matching values are collected into an array.
+type ImportantEventRule struct {
+	// Category is the data event category to match (exact match)
+	Category string `mapstructure:"category"`
+
+	// KeyPrefix is the string prefix to match at the beginning of
+	// the data event's key field
+	KeyPrefix string `mapstructure:"key_prefix"`
+
+	// FieldName is the name of the field in the summary object
+	// where matched values will be stored (always as an array)
+	FieldName string `mapstructure:"field_name"`
 }
 
 // FilterKeynames defines the names of the Git config settings that
@@ -100,7 +120,50 @@ func parseFilterSettingsFromBuffer(data []byte, path string) (*FilterSettings, e
 		}
 	}
 
+	fieldNames := make(map[string]bool)
+	for i, rule := range fs.ImportantEvents {
+		if len(rule.Category) == 0 {
+			return nil, fmt.Errorf("important_events[%d]: category cannot be empty", i)
+		}
+		if len(rule.KeyPrefix) == 0 {
+			return nil, fmt.Errorf("important_events[%d]: key_prefix cannot be empty", i)
+		}
+		if len(rule.FieldName) == 0 {
+			return nil, fmt.Errorf("important_events[%d]: field_name cannot be empty", i)
+		}
+		if fieldNames[rule.FieldName] {
+			return nil, fmt.Errorf("important_events[%d]: duplicate field_name '%s'", i, rule.FieldName)
+		}
+		fieldNames[rule.FieldName] = true
+	}
+
 	return fs, nil
+}
+
+// apply__important_events checks if a data event matches any configured
+// important_events rules and appends the event's value to the
+// importantEvents map if a match is found. Matching events are captured
+// regardless of nesting level or detail level.
+func apply__important_events(tr2 *trace2Dataset, category string, key string, value interface{}) {
+	if tr2.process.importantEvents == nil {
+		return
+	}
+
+	if tr2.rcvr_base == nil || tr2.rcvr_base.RcvrConfig == nil {
+		return
+	}
+
+	fs := tr2.rcvr_base.RcvrConfig.filterSettings
+	if fs == nil {
+		return
+	}
+
+	for _, rule := range fs.ImportantEvents {
+		if category == rule.Category && strings.HasPrefix(key, rule.KeyPrefix) {
+			tr2.process.importantEvents[rule.FieldName] = append(
+				tr2.process.importantEvents[rule.FieldName], value)
+		}
+	}
 }
 
 // Add a ruleset to the filter settings.  This is primarily for writing test code.

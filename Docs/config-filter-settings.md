@@ -254,6 +254,47 @@ the `ruleset_key`.)
 
 
 
+## Important Events
+
+In addition to controlling verbosity, the `filter.yml` file can
+declare a list of data events that should always be captured verbatim,
+regardless of the active detail level.  This lets operators guarantee
+that specific Trace2 data values are always surfaced in the OTEL
+process span even when verbose telemetry is disabled.
+
+Each rule matches data events by `category` (exact match) and
+`key_prefix` (prefix match on the event's key field).  All matching
+values are collected into an array under the specified `field_name` in
+the `trace2.process.important_events` span attribute.
+
+```
+important_events:
+  - category: <category-string>
+    key_prefix: <key-prefix-string>
+    field_name: <field-name>
+  ...
+```
+
+For example, to always capture error details from a `gvfs-helper`
+subprocess regardless of how verbosity is configured:
+
+```
+important_events:
+  - category: "gvfs-helper"
+    key_prefix: "error/"
+    field_name: "gvfs_helper_errors"
+```
+
+This would produce the following in the OTEL process span:
+
+```
+"trace2.process.important_events": {
+  "gvfs_helper_errors": ["(curl:35) SSL connect error [hard_fail]"]
+}
+```
+
+
+
 ## Filter Settings Syntax
 
 Now that all of the concepts have been introduced, we can describe
@@ -277,6 +318,12 @@ rulesets:
 
 defaults:
   ruleset: <ruleset-name> | <detail-level>
+
+important_events:
+  - category: <category-string>
+    key_prefix: <key-prefix-string>
+    field_name: <summary-field-name>
+  ...
 ```
 
 The value of the `defaults.ruleset` parameter will be used when a Git
