@@ -596,9 +596,11 @@ func apply__def_param(tr2 *trace2Dataset, evt *TrEvent) (err error) {
 	_, havePrevVal := tr2.process.paramSetValues[key]
 	priCur, havePrevPri := tr2.process.paramSetPriorities[key]
 
-	if havePrevVal && havePrevPri && priNew <= priCur {
+	if havePrevVal && havePrevPri && priNew < priCur {
 		// We already have a value for this key with a higher
 		// priority, so ignore this value.
+		// Note: When priorities are equal, we accept the new value
+		// to match Git's "last one wins" behavior.
 		return nil
 	}
 
