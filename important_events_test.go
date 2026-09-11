@@ -22,7 +22,7 @@ func Test_ImportantEvents_Match_Basic(t *testing.T) {
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			filterSettings: fs,
+			Filter: fs,
 		},
 	}
 
@@ -51,7 +51,7 @@ func Test_ImportantEvents_Match_NoMatch(t *testing.T) {
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			filterSettings: fs,
+			Filter: fs,
 		},
 	}
 
@@ -72,7 +72,7 @@ func Test_ImportantEvents_Match_NoConfig(t *testing.T) {
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			filterSettings: nil,
+			Filter: nil,
 		},
 	}
 
@@ -83,7 +83,7 @@ func Test_ImportantEvents_Match_NoConfig(t *testing.T) {
 // Test important_events values appear in their own attribute at dl:summary
 func Test_ImportantEvents_EmittedAtSummaryLevel(t *testing.T) {
 	cfg := &Config{
-		filterSettings: &FilterSettings{
+		Filter: &FilterSettings{
 			ImportantEvents: []ImportantEventRule{
 				{Category: "gvfs-helper", KeyPrefix: "error/", FieldName: "gvfs_helper_errors"},
 			},
@@ -141,7 +141,7 @@ func Test_ImportantEvents_Match_IntValue(t *testing.T) {
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			filterSettings: fs,
+			Filter: fs,
 		},
 	}
 
@@ -157,7 +157,7 @@ func Test_ImportantEvents_Match_IntValue(t *testing.T) {
 // (nesting > 1 with no matching region).
 func Test_ImportantEvents_EndToEnd_NestedEvent(t *testing.T) {
 	cfg := &Config{
-		filterSettings: &FilterSettings{
+		Filter: &FilterSettings{
 			ImportantEvents: []ImportantEventRule{
 				{Category: "gvfs-helper", KeyPrefix: "error/", FieldName: "gvfs_helper_errors"},
 			},
@@ -292,7 +292,7 @@ func extractImportantEventsJSON(t *testing.T, tr2 *trace2Dataset, dl FilterDetai
 // captured and visible in the OTLP span at dl:summary.
 func Test_E2E_ImportantEvents_ProcessLevel_AtSummaryDetailLevel(t *testing.T) {
 	cfg := &Config{
-		filterSettings: &FilterSettings{
+		Filter: &FilterSettings{
 			ImportantEvents: []ImportantEventRule{
 				{Category: "gvfs-helper", KeyPrefix: "error/", FieldName: "gvfs_helper_errors"},
 			},
@@ -325,7 +325,7 @@ func Test_E2E_ImportantEvents_ProcessLevel_AtSummaryDetailLevel(t *testing.T) {
 // important_events AND the region should have it in its own data.
 func Test_E2E_ImportantEvents_InsideRegion(t *testing.T) {
 	cfg := &Config{
-		filterSettings: &FilterSettings{
+		Filter: &FilterSettings{
 			ImportantEvents: []ImportantEventRule{
 				{Category: "gvfs-helper", KeyPrefix: "error/", FieldName: "gvfs_helper_errors"},
 			},
@@ -364,7 +364,7 @@ func Test_E2E_ImportantEvents_InsideRegion(t *testing.T) {
 // Value should still be captured; region attachment fails silently.
 func Test_E2E_ImportantEvents_OrphanedNesting(t *testing.T) {
 	cfg := &Config{
-		filterSettings: &FilterSettings{
+		Filter: &FilterSettings{
 			ImportantEvents: []ImportantEventRule{
 				{Category: "gvfs-helper", KeyPrefix: "error/", FieldName: "gvfs_helper_errors"},
 			},
@@ -395,7 +395,7 @@ func Test_E2E_ImportantEvents_OrphanedNesting(t *testing.T) {
 // Test: multiple data events matching the same rule accumulate all values.
 func Test_E2E_ImportantEvents_MultipleValues(t *testing.T) {
 	cfg := &Config{
-		filterSettings: &FilterSettings{
+		Filter: &FilterSettings{
 			ImportantEvents: []ImportantEventRule{
 				{Category: "gvfs-helper", KeyPrefix: "error/", FieldName: "gvfs_helper_errors"},
 			},
@@ -428,7 +428,7 @@ func Test_E2E_ImportantEvents_MultipleValues(t *testing.T) {
 // in the important_events.
 func Test_E2E_ImportantEvents_NonMatchingEventsExcluded(t *testing.T) {
 	cfg := &Config{
-		filterSettings: &FilterSettings{
+		Filter: &FilterSettings{
 			ImportantEvents: []ImportantEventRule{
 				{Category: "gvfs-helper", KeyPrefix: "error/", FieldName: "gvfs_helper_errors"},
 			},
@@ -458,7 +458,7 @@ func Test_E2E_ImportantEvents_NonMatchingEventsExcluded(t *testing.T) {
 // Test: integer values (data events can carry int64).
 func Test_E2E_ImportantEvents_IntegerValue(t *testing.T) {
 	cfg := &Config{
-		filterSettings: &FilterSettings{
+		Filter: &FilterSettings{
 			ImportantEvents: []ImportantEventRule{
 				{Category: "perf", KeyPrefix: "count/", FieldName: "perf_counts"},
 			},
@@ -488,7 +488,7 @@ func Test_E2E_ImportantEvents_IntegerValue(t *testing.T) {
 // in the same output without interference.
 func Test_E2E_ImportantEvents_CoexistsWithOtherRuleTypes(t *testing.T) {
 	cfg := &Config{
-		summary: &SummarySettings{
+		Summary: &SummarySettings{
 			MessagePatterns: []MessagePatternRule{
 				{Prefix: "error:", FieldName: "error_msg_count"},
 			},
@@ -496,7 +496,7 @@ func Test_E2E_ImportantEvents_CoexistsWithOtherRuleTypes(t *testing.T) {
 				{Category: "gvfs-helper", Label: "fetch", CountField: "fetch_count"},
 			},
 		},
-		filterSettings: &FilterSettings{
+		Filter: &FilterSettings{
 			ImportantEvents: []ImportantEventRule{
 				{Category: "gvfs-helper", KeyPrefix: "error/", FieldName: "gvfs_helper_errors"},
 			},
@@ -539,7 +539,7 @@ func Test_E2E_ImportantEvents_CoexistsWithOtherRuleTypes(t *testing.T) {
 // Test: captured values appear at ALL detail levels, not just verbose.
 func Test_E2E_ImportantEvents_AllDetailLevels(t *testing.T) {
 	cfg := &Config{
-		filterSettings: &FilterSettings{
+		Filter: &FilterSettings{
 			ImportantEvents: []ImportantEventRule{
 				{Category: "gvfs-helper", KeyPrefix: "error/", FieldName: "gvfs_helper_errors"},
 			},
@@ -570,12 +570,12 @@ func Test_E2E_ImportantEvents_AllDetailLevels(t *testing.T) {
 // create the attribute (no spurious empty arrays).
 func Test_E2E_ImportantEvents_NoPatternsConfigured(t *testing.T) {
 	cfg := &Config{
-		summary: &SummarySettings{
+		Summary: &SummarySettings{
 			MessagePatterns: []MessagePatternRule{
 				{Prefix: "error:", FieldName: "error_count"},
 			},
 		},
-		filterSettings: &FilterSettings{},
+		Filter: &FilterSettings{},
 	}
 
 	events := []string{
@@ -597,8 +597,8 @@ func Test_E2E_ImportantEvents_NoPatternsConfigured(t *testing.T) {
 // are processed without crashing.
 func Test_E2E_ImportantEvents_NoSummaryConfig(t *testing.T) {
 	cfg := &Config{
-		summary:        nil,
-		filterSettings: &FilterSettings{},
+		Summary: nil,
+		Filter:  &FilterSettings{},
 	}
 
 	events := []string{
@@ -622,7 +622,7 @@ func Test_E2E_ImportantEvents_NoSummaryConfig(t *testing.T) {
 // Test: data events on a non-main thread are still captured.
 func Test_E2E_ImportantEvents_NonMainThread(t *testing.T) {
 	cfg := &Config{
-		filterSettings: &FilterSettings{
+		Filter: &FilterSettings{
 			ImportantEvents: []ImportantEventRule{
 				{Category: "gvfs-helper", KeyPrefix: "error/", FieldName: "gvfs_helper_errors"},
 			},
@@ -655,7 +655,7 @@ func Test_E2E_ImportantEvents_NonMainThread(t *testing.T) {
 // stack. The value should still be captured even though region attachment fails.
 func Test_E2E_ImportantEvents_DeepNesting_PartialRegionStack(t *testing.T) {
 	cfg := &Config{
-		filterSettings: &FilterSettings{
+		Filter: &FilterSettings{
 			ImportantEvents: []ImportantEventRule{
 				{Category: "gvfs-helper", KeyPrefix: "error/", FieldName: "gvfs_helper_errors"},
 			},
@@ -687,7 +687,7 @@ func Test_E2E_ImportantEvents_DeepNesting_PartialRegionStack(t *testing.T) {
 // event stream produce independent fields.
 func Test_E2E_ImportantEvents_MultipleRules(t *testing.T) {
 	cfg := &Config{
-		filterSettings: &FilterSettings{
+		Filter: &FilterSettings{
 			ImportantEvents: []ImportantEventRule{
 				{Category: "gvfs-helper", KeyPrefix: "error/", FieldName: "gvfs_errors"},
 				{Category: "network", KeyPrefix: "timeout/", FieldName: "network_timeouts"},

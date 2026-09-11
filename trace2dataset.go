@@ -273,10 +273,10 @@ func NewTrace2Dataset(rcvr_base *Rcvr_Base) *trace2Dataset {
 
 	if rcvr_base != nil && rcvr_base.RcvrConfig != nil {
 		cfg := rcvr_base.RcvrConfig
-		if cfg.summary != nil {
-			tr2.process.summary = configuredSummary(cfg.summary)
+		if cfg.Summary != nil {
+			tr2.process.summary = configuredSummary(cfg.Summary)
 		}
-		if cfg.filterSettings != nil && len(cfg.filterSettings.ImportantEvents) > 0 {
+		if cfg.Filter != nil && len(cfg.Filter.ImportantEvents) > 0 {
 			tr2.process.importantEvents = make(map[string][]interface{})
 		}
 	}
@@ -521,7 +521,7 @@ func (tr2 *trace2Dataset) exportTraces() {
 	}
 
 	dl, dl_debug := computeDetailLevel(
-		tr2.rcvr_base.RcvrConfig.filterSettings,
+		tr2.rcvr_base.RcvrConfig.Filter,
 		tr2.process.paramSetValues,
 		tr2.process.qualifiedNames)
 
@@ -532,8 +532,8 @@ func (tr2 *trace2Dataset) exportTraces() {
 	}
 
 	var keynames FilterKeynames
-	if tr2.rcvr_base.RcvrConfig.filterSettings != nil {
-		keynames = tr2.rcvr_base.RcvrConfig.filterSettings.Keynames
+	if tr2.rcvr_base.RcvrConfig.Filter != nil {
+		keynames = tr2.rcvr_base.RcvrConfig.Filter.Keynames
 	}
 	traces := tr2.ToTraces(dl, keynames)
 
