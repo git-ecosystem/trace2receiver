@@ -44,9 +44,12 @@ receivers:
   trace2receiver:
     socket: <unix-domain-socket-pathname>
     pipe:   <windows-named-pipe-pathname>
-    pii:    <pii-settings-pathname>
-    filter: <filter-settings-pathname>
-    summary: <summary-settings-pathname>
+    pii:
+      <pii-settings>
+    filter:
+      <filter-settings>
+    summary:
+      <summary-settings>
 ```
 
 For example:
@@ -56,9 +59,35 @@ receivers:
   trace2receiver:
     socket: "/usr/local/my-collector/trace2.socket"
     pipe:   "//./pipe/my-collector.pipe"
-    pii:    "/usr/local/my-collector/pii.yml"
-    filter: "/usr/local/my-collector/filter.yml"
-    summary: "/usr/local/my-collector/summary.yml"
+    pii:
+      include:
+        hostname: true
+        username: false
+    filter:
+      defaults:
+        ruleset: "dl:verbose"
+    summary:
+      message_patterns:
+        - prefix: "my_prefix:"
+          field_name: "myPrefixCount"
+      region_timers:
+        - category: "the_category"
+          label: "objects/foo"
+          count_field: "fooCount"
+          time_field: "fooTime"
+```
+
+If you prefer to keep the `pii`, `filter`, or `summary` configuration
+in a separate file, you can use the `${file:PATH}` syntax:
+
+```
+receivers:
+  trace2receiver:
+    socket:  "/usr/local/my-collector/trace2.socket"
+    pipe:    "//./pipe/my-collector.pipe"
+    pii:     "${file:/usr/local/my-collector/pii.yml}"
+    filter:  "${file:/usr/local/my-collector/filter.yml}"
+    summary: "${file:/usr/local/my-collector/summary.yml}"
 ```
 
 ### `<unix-domain-socket-pathname>` (Required on Unix)
@@ -105,27 +134,26 @@ for details.
 $ git config --system trace2.eventtarget "//./pipe/my-collector.pipe"
 ```
 
-### `<pii-settings-pathname>` (Optional)
+### `pii` (Optional)
 
-The pathname to a `pii.yml` file containing privacy-related feature flags.
+Inline PII settings controlling privacy-related feature flags.
 This is optional.  These features are disabled by default.
 
 See [config PII settings](./config-pii-settings.md) for details.
 
-### `<filter-settings-pathname>` (Optional)
+### `filter` (Optional)
 
-The pathname to a `filter.yml` file controlling the verbosity of the
+Inline filter settings controlling the verbosity of the
 generated OTEL telemetry data.  This is optional.  If omitted,
 summary-level telemetry will be emitted.
 
 See [config filter settings](./config-filter-settings.md) for details.
 
-### `<summary-settings-pathname>` (Optional)
+### `summary` (Optional)
 
-The pathname to a `summary.yml` file controlling which trace2 events
-are aggregated into the `trace2.process.summary` attribute on the OTEL
-process span.  This is optional.  If omitted, no aggregated summary
-metrics are emitted.
+Inline summary settings controlling which trace2 events are aggregated into
+the `trace2.process.summary` attribute on the OTEL process span.
+This is optional. If omitted, no aggregated summary metrics are emitted.
 
 The summary is emitted at all detail levels (including `dl:summary`),
 making it useful for surfacing aggregated statistics without requiring
