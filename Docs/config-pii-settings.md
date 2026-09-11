@@ -14,6 +14,11 @@ The PII settings are specified inline under the
 parameter in the main `config.yml` file.  Alternatively, you can use
 the `${file:PATH}` syntax to reference an external YAML file.
 
+For backwards compatibility, you can also specify a plain file path
+string (without the `${file:}` wrapper) as the value of the `pii`
+field, and the receiver will read and parse the YAML file at that
+path.
+
 ## PII Settings Syntax
 
 When the settings are specified inline in the Collector configuration,
@@ -26,9 +31,9 @@ pii:
     username: <bool>
 ```
 
-When the `pii` field references a standalone file using
-`${file:PATH}`, the file contains the settings directly and omits the
-outer `pii` field:
+When the `pii` field references a standalone file using either a plain
+path or `${file:PATH}`, the file contains the settings directly and
+omits the outer `pii` field:
 
 ```
 include:

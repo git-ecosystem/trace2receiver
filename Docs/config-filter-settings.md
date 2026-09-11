@@ -11,6 +11,11 @@ The filter settings are specified inline under the
 parameter in the main `config.yml` file.  Alternatively, you can use
 the `${file:PATH}` syntax to reference an external YAML file.
 
+For backwards compatibility, you can also specify a plain file path
+string (without the `${file:}` wrapper) as the value of the `filter`
+field, and the receiver will read and parse the YAML file at that
+path.
+
 
 
 ## Smart Filtering using Detail Levels, Rulesets, and Repo Nicknames
@@ -334,9 +339,9 @@ filter:
     ...
 ```
 
-When the `filter` field references a standalone file using
-`${file:PATH}`, the file contains the settings directly and omits the
-outer `filter` field:
+When the `filter` field references a standalone file using either a
+plain path or `${file:PATH}`, the file contains the settings directly
+and omits the outer `filter` field:
 
 ```
 keynames:
@@ -408,3 +413,4 @@ use `dl:drop` and not emit any telemetry.
 
 All other commands will use the default `dl:summary` and
 emit command overview telemetry.
+
