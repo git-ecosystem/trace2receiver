@@ -10,10 +10,10 @@ import (
 // look for in the Trace2 event stream to help us decide how to
 // filter data for a particular command.
 type FilterSettings struct {
-	Keynames        FilterKeynames   `mapstructure:"keynames"`
-	Nicknames       FilterNicknames  `mapstructure:"nicknames"`
-	Rulesets        FilterRulesets   `mapstructure:"rulesets"`
-	Defaults        FilterDefaults   `mapstructure:"defaults"`
+	Keynames        FilterKeynames       `mapstructure:"keynames"`
+	Nicknames       FilterNicknames      `mapstructure:"nicknames"`
+	Rulesets        FilterRulesets       `mapstructure:"rulesets"`
+	Defaults        FilterDefaults       `mapstructure:"defaults"`
 	ImportantEvents []ImportantEventRule `mapstructure:"important_events"`
 
 	// The set of custom rulesets defined in YML are each parsed
@@ -102,39 +102,8 @@ func parseFilterSettingsFromBuffer(data []byte, path string) (*FilterSettings, e
 		return nil, err
 	}
 
-	// After parsing the YML and populating the `mapstructure` fields, we need
-	// to validate them and/or build internal structures from them.
-
-	// For each custom ruleset [<name> -> <path>] in the table (the map[string]string),
-	// create a peer entry in the internal [<name> -> <rsdef>] table and preload
-	// the various `ruleset.yml` files.
-	fs.rulesetDefs = make(map[string]*RulesetDefinition)
-	for k_rs_name, v_rs_path := range fs.Rulesets {
-		if !strings.HasPrefix(k_rs_name, "rs:") || len(k_rs_name) < 4 || len(v_rs_path) == 0 {
-			return nil, fmt.Errorf("ruleset has invalid name or pathname'%s':'%s'", k_rs_name, v_rs_path)
-		}
-
-		fs.rulesetDefs[k_rs_name], err = parseRulesetFile(v_rs_path)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	fieldNames := make(map[string]bool)
-	for i, rule := range fs.ImportantEvents {
-		if len(rule.Category) == 0 {
-			return nil, fmt.Errorf("important_events[%d]: category cannot be empty", i)
-		}
-		if len(rule.KeyPrefix) == 0 {
-			return nil, fmt.Errorf("important_events[%d]: key_prefix cannot be empty", i)
-		}
-		if len(rule.FieldName) == 0 {
-			return nil, fmt.Errorf("important_events[%d]: field_name cannot be empty", i)
-		}
-		if fieldNames[rule.FieldName] {
-			return nil, fmt.Errorf("important_events[%d]: duplicate field_name '%s'", i, rule.FieldName)
-		}
-		fieldNames[rule.FieldName] = true
+	if err = fs.validate(); err != nil {
+		return nil, err
 	}
 
 	return fs, nil
@@ -153,7 +122,7 @@ func apply__important_events(tr2 *trace2Dataset, category string, key string, va
 		return
 	}
 
-	fs := tr2.rcvr_base.RcvrConfig.filterSettings
+	fs := tr2.rcvr_base.RcvrConfig.Filter
 	if fs == nil {
 		return
 	}
@@ -164,6 +133,44 @@ func apply__important_events(tr2 *trace2Dataset, category string, key string, va
 				tr2.process.importantEvents[rule.FieldName], value)
 		}
 	}
+}
+
+// validate checks the parsed filter settings and builds internal
+// structures.  For each custom ruleset [<name> -> <path>] in the
+// table, create a peer entry in the internal [<name> -> <rsdef>]
+// table and preload the various `ruleset.yml` files.
+func (fs *FilterSettings) validate() error {
+	fs.rulesetDefs = make(map[string]*RulesetDefinition)
+	for k_rs_name, v_rs_path := range fs.Rulesets {
+		if !strings.HasPrefix(k_rs_name, "rs:") || len(k_rs_name) < 4 || len(v_rs_path) == 0 {
+			return fmt.Errorf("ruleset has invalid name or pathname'%s':'%s'", k_rs_name, v_rs_path)
+		}
+
+		var err error
+		fs.rulesetDefs[k_rs_name], err = parseRulesetFile(v_rs_path)
+		if err != nil {
+			return err
+		}
+	}
+
+	fieldNames := make(map[string]bool)
+	for i, rule := range fs.ImportantEvents {
+		if len(rule.Category) == 0 {
+			return fmt.Errorf("important_events[%d]: category cannot be empty", i)
+		}
+		if len(rule.KeyPrefix) == 0 {
+			return fmt.Errorf("important_events[%d]: key_prefix cannot be empty", i)
+		}
+		if len(rule.FieldName) == 0 {
+			return fmt.Errorf("important_events[%d]: field_name cannot be empty", i)
+		}
+		if fieldNames[rule.FieldName] {
+			return fmt.Errorf("important_events[%d]: duplicate field_name '%s'", i, rule.FieldName)
+		}
+		fieldNames[rule.FieldName] = true
+	}
+
+	return nil
 }
 
 // Add a ruleset to the filter settings.  This is primarily for writing test code.

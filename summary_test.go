@@ -347,7 +347,7 @@ func Test_MessagePatternMatching_Basic(t *testing.T) {
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			summary: css,
+			Summary: css,
 		},
 	}
 
@@ -380,7 +380,7 @@ func Test_MessagePatternMatching_MultipleMatches(t *testing.T) {
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			summary: css,
+			Summary: css,
 		},
 	}
 
@@ -403,7 +403,7 @@ func Test_MessagePatternMatching_NoConfig(t *testing.T) {
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			summary: nil,
+			Summary: nil,
 		},
 	}
 
@@ -432,7 +432,7 @@ func Test_RegionTimerAggregation_Basic(t *testing.T) {
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			summary: css,
+			Summary: css,
 		},
 	}
 
@@ -482,7 +482,7 @@ func Test_RegionTimerAggregation_CountOnly(t *testing.T) {
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			summary: css,
+			Summary: css,
 		},
 	}
 
@@ -522,7 +522,7 @@ func Test_RegionTimerAggregation_TimeOnly(t *testing.T) {
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			summary: css,
+			Summary: css,
 		},
 	}
 
@@ -545,12 +545,12 @@ func Test_RegionTimerAggregation_TimeOnly(t *testing.T) {
 func Test_Summary_EmittedAtSummaryLevel(t *testing.T) {
 	// Create a minimal config with summary
 	cfg := &Config{
-		summary: &SummarySettings{
+		Summary: &SummarySettings{
 			MessagePatterns: []MessagePatternRule{
 				{Prefix: "test_msg:", FieldName: "msgCount"},
 			},
 		},
-		filterSettings: &FilterSettings{},
+		Filter: &FilterSettings{},
 	}
 
 	rcvr := &Rcvr_Base{
@@ -615,7 +615,7 @@ func Test_RegionTimerAggregation_NoMatch(t *testing.T) {
 	}
 	tr2.rcvr_base = &Rcvr_Base{
 		RcvrConfig: &Config{
-			summary: css,
+			Summary: css,
 		},
 	}
 

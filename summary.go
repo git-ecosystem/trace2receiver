@@ -108,7 +108,7 @@ func apply__summary_message(tr2 *trace2Dataset, message string) {
 		return
 	}
 
-	css := tr2.rcvr_base.RcvrConfig.summary
+	css := tr2.rcvr_base.RcvrConfig.Summary
 	if css == nil {
 		return
 	}
@@ -134,7 +134,7 @@ func apply__summary_region(tr2 *trace2Dataset, region *TrRegion) {
 		return
 	}
 
-	css := tr2.rcvr_base.RcvrConfig.summary
+	css := tr2.rcvr_base.RcvrConfig.Summary
 	if css == nil {
 		return
 	}

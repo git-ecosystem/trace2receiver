@@ -5,7 +5,18 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+
+	"github.com/mitchellh/mapstructure"
 )
+
+// Note: The `pii`, `filter`, and `summary` fields accept either:
+//   - inline YAML/JSON configuration (an object/map), or
+//   - a string containing a file path to a YAML file.
+//
+// This for backwards compatibility with the original design of the
+// config where these were only allowed to be file paths.
+// You can continue to use a simple string, or the built-in ${file}
+// syntax to specify a file path if inline config is not convenient.
 
 // `Config` represents the complete configuration settings for
 // an individual receiver declaration from the `config.yaml`.
@@ -45,17 +56,27 @@ type Config struct {
 	// data stream.
 	AllowCommandControlVerbs bool `mapstructure:"enable_commands"`
 
-	// Pathname to YML file containing PII settings.
-	PiiSettingsPath string `mapstructure:"pii"`
-	piiSettings     *PiiSettings
+	// PII settings control whether possibly GDPR-sensitive fields
+	// are included in the telemetry output.
+	// RawPii is exported because the Collector's reflection-based
+	// config decoder can only populate exported fields.
+	RawPii any `mapstructure:"pii"`
+	// Pii contains the settings resolved from RawPii by Validate.
+	Pii *PiiSettings `mapstructure:"-"`
 
-	// Pathname to YML file containing our filter settings.
-	FilterSettingsPath string `mapstructure:"filter"`
-	filterSettings     *FilterSettings
+	// Filter settings control how the trace2 data is filtered.
+	// RawFilter is exported because the Collector's reflection-based
+	// config decoder can only populate exported fields.
+	RawFilter any `mapstructure:"filter"`
+	// Filter contains the settings resolved from RawFilter by Validate.
+	Filter *FilterSettings `mapstructure:"-"`
 
-	// Pathname to YML file containing summary settings.
-	SummaryPath string `mapstructure:"summary"`
-	summary     *SummarySettings
+	// Summary settings control aggregated metrics from trace2 events.
+	// RawSummary is exported because the Collector's reflection-based
+	// config decoder can only populate exported fields.
+	RawSummary any `mapstructure:"summary"`
+	// Summary contains the settings resolved from RawSummary by Validate.
+	Summary *SummarySettings `mapstructure:"-"`
 }
 
 // `Validate()` checks if the receiver configuration is valid.
@@ -101,28 +122,74 @@ func (cfg *Config) Validate() error {
 		cfg.UnixSocketPath = path
 	}
 
-	if len(cfg.PiiSettingsPath) > 0 {
-		cfg.piiSettings, err = parsePiiFile(cfg.PiiSettingsPath)
+	if cfg.RawPii != nil {
+		cfg.Pii, err = resolveAnyField(cfg.RawPii, parsePiiFromBuffer)
 		if err != nil {
+			return fmt.Errorf("pii: %w", err)
+		}
+	}
+
+	if cfg.RawFilter != nil {
+		cfg.Filter, err = resolveAnyField(cfg.RawFilter, parseFilterSettingsFromBuffer)
+		if err != nil {
+			return fmt.Errorf("filter: %w", err)
+		}
+	}
+
+	if cfg.Filter != nil {
+		if err = cfg.Filter.validate(); err != nil {
 			return err
 		}
 	}
 
-	if len(cfg.FilterSettingsPath) > 0 {
-		cfg.filterSettings, err = parseFilterSettings(cfg.FilterSettingsPath)
+	if cfg.RawSummary != nil {
+		cfg.Summary, err = resolveAnyField(cfg.RawSummary, parseSummarySettingsFromBuffer)
 		if err != nil {
-			return err
+			return fmt.Errorf("summary: %w", err)
 		}
 	}
 
-	if len(cfg.SummaryPath) > 0 {
-		cfg.summary, err = parseSummarySettings(cfg.SummaryPath)
-		if err != nil {
+	if cfg.Summary != nil {
+		if err = cfg.Summary.validate(); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// resolveAnyField handles a config field that may be either:
+//   - nil: the field was not specified
+//   - a string: a file path to a YAML file to parse
+//   - a map: inline configuration to decode into the target struct
+func resolveAnyField[T MyYmlFileTypes](raw any, parseFn MyYmlParseBufferFn[T]) (*T, error) {
+	if raw == nil {
+		return nil, nil
+	}
+
+	switch v := raw.(type) {
+	case string:
+		if len(v) == 0 {
+			return nil, nil
+		}
+		return parseYmlFile(v, parseFn)
+
+	default:
+		// Assume it's a map/object from inline configuration.
+		// Use mapstructure to decode the raw value into the typed struct.
+		p := new(T)
+		decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			Result:  p,
+			TagName: "mapstructure",
+		})
+		if err != nil {
+			return nil, fmt.Errorf("could not create decoder: %w", err)
+		}
+		if err = decoder.Decode(v); err != nil {
+			return nil, fmt.Errorf("could not decode inline config: %w", err)
+		}
+		return p, nil
+	}
 }
 
 // Require (the backslash spelling of) `//./pipe/<pipename>` but allow

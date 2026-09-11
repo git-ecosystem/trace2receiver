@@ -363,6 +363,62 @@ important_events:
 	assert.Contains(t, err.Error(), "duplicate field_name")
 }
 
+func Test_ImportantEvents_InlineValidation(t *testing.T) {
+	tests := []struct {
+		name          string
+		rules         []ImportantEventRule
+		errorContains string
+	}{
+		{
+			name: "valid",
+			rules: []ImportantEventRule{
+				{Category: "network", KeyPrefix: "timeout/", FieldName: "network_timeouts"},
+			},
+		},
+		{
+			name: "empty category",
+			rules: []ImportantEventRule{
+				{KeyPrefix: "timeout/", FieldName: "network_timeouts"},
+			},
+			errorContains: "category cannot be empty",
+		},
+		{
+			name: "empty key prefix",
+			rules: []ImportantEventRule{
+				{Category: "network", FieldName: "network_timeouts"},
+			},
+			errorContains: "key_prefix cannot be empty",
+		},
+		{
+			name: "empty field name",
+			rules: []ImportantEventRule{
+				{Category: "network", KeyPrefix: "timeout/"},
+			},
+			errorContains: "field_name cannot be empty",
+		},
+		{
+			name: "duplicate field name",
+			rules: []ImportantEventRule{
+				{Category: "network", KeyPrefix: "timeout/", FieldName: "events"},
+				{Category: "filesystem", KeyPrefix: "error/", FieldName: "events"},
+			},
+			errorContains: "duplicate field_name",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := &FilterSettings{ImportantEvents: tt.rules}
+			err := fs.validate()
+			if tt.errorContains == "" {
+				assert.NoError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.errorContains)
+			}
+		})
+	}
+}
+
 // //////////////////////////////////////////////////////////////
 
 func Test_Nil_Nil_FilterSettings(t *testing.T) {
