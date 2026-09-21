@@ -500,6 +500,41 @@ func Test_Dataset_DefParam_Scoped(t *testing.T) {
 	assert.Equal(t, tr2.process.paramSetValues["bar"], x_param_local_bar)
 }
 
+// Verify that when multiple def_param events are sent for the same parameter
+// with the SAME scope, the last one wins (matching Git's behavior).
+// This happens when using includeIf to include config files.
+func Test_Dataset_DefParam_SameScope_LastWins(t *testing.T) {
+
+	var events []string = []string{
+		x_make_version(),
+		x_make_start(),
+
+		// Multiple values for "ruleset" with the same scope (local).
+		// The last one should win, matching git's "last one wins" behavior.
+		x_make_def_param("local", "ruleset", "dl:drop"),
+		x_make_def_param("local", "ruleset", "dl:verbose"),
+
+		// Also test with global scope
+		x_make_def_param("global", "nickname", "first"),
+		x_make_def_param("global", "nickname", "second"),
+		x_make_def_param("global", "nickname", "last"),
+
+		x_make_atexit(), // Should be last
+	}
+
+	tr2, sufficient, _ := load_test_dataset(t, events)
+	assert.True(t, sufficient, "have sufficient data")
+
+	assert.Equal(t, len(tr2.process.paramSetValues), 2)
+
+	// For same-priority configs, the LAST one should win (not first)
+	assert.NotNil(t, tr2.process.paramSetValues["ruleset"])
+	assert.Equal(t, tr2.process.paramSetValues["ruleset"], "dl:verbose")
+
+	assert.NotNil(t, tr2.process.paramSetValues["nickname"])
+	assert.Equal(t, tr2.process.paramSetValues["nickname"], "last")
+}
+
 func Test_Dataset_ChildProcesses(t *testing.T) {
 
 	var events []string = []string{
